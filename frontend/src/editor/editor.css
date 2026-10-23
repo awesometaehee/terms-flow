@@ -86,9 +86,9 @@
 .block-card .drag-handle:active { cursor: grabbing; }
 .block-card.is-dragging { opacity: 0.6; }
 
-/* {{ 입력 시 변수 고르기 목록 */
+/* {{ 변수 목록, / 넣기 목록: 위치를 잡는 바깥 요소(body에 붙음). 모달(200)·도구 막대(250) 위 */
+.suggest-popup { z-index: 400; }
 .variable-suggest {
-  z-index: 400; /* 모달(200) 위 */
   min-width: 240px;
   max-width: 360px;
   max-height: 320px;

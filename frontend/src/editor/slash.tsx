@@ -167,6 +167,8 @@ export const SlashCommand = Extension.create({
             onStart: (props) => {
               close();
               component = new ReactRenderer(SlashList, { props, editor: props.editor });
+              // 위치를 잡는 바깥 요소에 z-index를 줘야 모달 위에 뜬다.
+              component.element.classList.add("suggest-popup");
               unmount = props.mount(component.element);
             },
             onUpdate: (props) => component?.updateProps(props),
