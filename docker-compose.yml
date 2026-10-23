@@ -1,0 +1,104 @@
+# 운영 배포용 구성. 개발은 Docker 없이 로컬에서 실행한다 (README의 "로컬 개발").
+#
+# 실행: docker compose --env-file .env.production up -d --build
+# 접속: http://<서버>:${WEB_PORT}  (화면 + /api 프록시). DB·저장소·API 포트는 외부에 열지 않는다.
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: backend/Dockerfile
+    target: api
+  env_file: .env.production
+  environment:
+    POSTGRES_HOST: db
+    POSTGRES_PORT: "5432"
+    STORAGE_BACKEND: s3
+    S3_ENDPOINT_URL: http://storage:8333
+  restart: unless-stopped
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Asia/Seoul
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # S3 호환 파일 저장소. 운영 저장소가 정해지면 S3_ENDPOINT_URL만 바꿔 외부 S3로 옮긴다.
+  storage:
+    image: chrislusf/seaweedfs:4.48
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        cat > /tmp/s3.json <<EOF
+        {"identities":[{"name":"app","credentials":[{"accessKey":"$${S3_ACCESS_KEY}","secretKey":"$${S3_SECRET_KEY}"}],"actions":["Admin","Read","Write","List","Tagging"]}]}
+        EOF
+        exec weed server -dir=/data -s3 -s3.port=8333 -s3.config=/tmp/s3.json -volume.max=0 -master.volumeSizeLimitMB=1024
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - storagedata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8333/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    <<: *backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      storage:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  # 발행·일괄 수정 작업 처리와 PDF/PNG 렌더링 담당
+  worker:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: worker
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      storage:
+        condition: service_healthy
+
+  # 빌드된 화면을 nginx로 제공하고 /api를 api 서비스로 넘긴다.
+  web:
+    build:
+      context: frontend
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  storagedata:

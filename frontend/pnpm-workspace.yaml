@@ -1,0 +1,4 @@
+# 공급망 위험을 줄이기 위해 배포 후 2주(분 단위)가 지나지 않은 버전은 설치하지 않는다.
+minimumReleaseAge: 20160
+allowBuilds:
+  esbuild: true

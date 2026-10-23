@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://terms-flow.local/schemas/layout.v1.schema.json",
+  "title": "문서 템플릿 레이아웃 v1",
+  "description": "template_revisions.layout_definition 형식. 블록을 순서대로 렌더링한다. text에는 {{ product.name }} 같은 허용된 변수만 쓸 수 있다. 이 파일은 사용 후 수정하지 않고, 변경이 필요하면 v2 파일을 추가한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "blocks"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/heading" },
+          { "$ref": "#/$defs/paragraph" },
+          { "$ref": "#/$defs/clauses" },
+          { "$ref": "#/$defs/variantTable" },
+          { "$ref": "#/$defs/variantPrices" },
+          { "$ref": "#/$defs/pageBreak" }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "text": { "type": "string", "pattern": "\\S" },
+    "heading": {
+      "description": "제목",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "heading" },
+        "text": { "$ref": "#/$defs/text" },
+        "level": { "enum": [1, 2, 3] }
+      }
+    },
+    "paragraph": {
+      "description": "문단. 빈 줄로 문단을 나눈다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "paragraph" },
+        "text": { "$ref": "#/$defs/text" }
+      }
+    },
+    "clauses": {
+      "description": "템플릿의 조항 규칙에 따라 포함된 조항을 순서대로 출력한다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "clauses" },
+        "numbering": { "enum": ["article", "none"] }
+      }
+    },
+    "variantTable": {
+      "description": "판매 구성별 품목 표. 구성이 2개 이상이면 구성별 비교 열을 만든다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "variant_table" }
+      }
+    },
+    "variantPrices": {
+      "description": "판매 구성 이름과 금액 목록",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "variant_prices" }
+      }
+    },
+    "pageBreak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "page_break" }
+      }
+    }
+  }
+}

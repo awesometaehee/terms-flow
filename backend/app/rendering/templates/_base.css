@@ -1,0 +1,45 @@
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  * { box-sizing: border-box; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    margin: 0;
+    /* Docker 이미지: Noto Sans CJK KR, Windows: 맑은 고딕 */
+    font-family: "Noto Sans CJK KR", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    font-size: 10pt;
+    line-height: 1.6;
+    color: #111;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+  }
+  .document + .document { break-before: page; }
+  h1 { font-size: 17pt; text-align: center; margin: 0 0 8mm; }
+  h2 { font-size: 13pt; margin: 6mm 0 3mm; }
+  h3 { font-size: 11pt; margin: 4mm 0 2mm; }
+  h1, h2, h3 { break-after: avoid; }
+  p { margin: 0 0 2.5mm; }
+  .clause { margin: 0 0 4mm; }
+  .clause-title { font-weight: 700; margin: 0 0 1.5mm; break-after: avoid; }
+  .page-break { break-after: page; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; margin: 2mm 0 3mm; }
+  thead { display: table-header-group; }
+  tr { break-inside: avoid; }
+  th, td { border: 0.6pt solid #555; padding: 1.6mm 2mm; vertical-align: top; text-align: left; }
+  th { background: #eef0f3; font-weight: 700; }
+  td.cell { white-space: pre-line; }
+  tr.group td { background: #f6f7f9; font-weight: 700; }
+  tr.child td.label { padding-left: 6mm; }
+  col.label { width: 26%; }
+  .footnotes { font-size: 9pt; color: #333; }
+  .prices td.amount { text-align: right; }
+  .preview-banner {
+    font-size: 9pt; color: #8a5300; background: #fff4e0;
+    border: 0.6pt solid #e0b066; padding: 1.5mm 3mm; margin-bottom: 5mm;
+  }
+  /* 서식 본문 (모듈·KMS 문서) */
+  ul, ol { margin: 0 0 2.5mm; padding-left: 6mm; }
+  li > p { margin: 0 0 1mm; }
+  mark { padding: 0 0.5mm; }
+  a { color: #1d4ed8; }
+  .var { font-weight: 700; }
+  .var-missing { color: #b42318; background: #fde8e8; }
+  .module { margin: 0 0 3mm; }

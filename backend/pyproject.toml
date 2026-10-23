@@ -1,0 +1,54 @@
+[project]
+name = "terms-flow-backend"
+version = "0.1.0"
+description = "약관·상품설명서 자동 생성 시스템 백엔드 (API·작업 처리·렌더러)"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.6",
+    "sqlalchemy>=2.0.36",
+    "psycopg[binary]>=3.2",
+    "alembic>=1.14",
+    "procrastinate>=3.0",
+    "jinja2>=3.1",
+    "jsonschema>=4.23",
+    "boto3>=1.35",
+    "pypdf>=5.1",
+    "pypdfium2>=4.30",
+    "pillow>=11.0",
+    "playwright>=1.49",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "httpx>=0.28",
+    "ruff>=0.8",
+    "mypy>=1.13",
+]
+
+[tool.uv]
+package = false
+# 공급망 위험을 줄이기 위해 배포 후 2주가 지나지 않은 패키지는 잠금에 넣지 않는다.
+exclude-newer = "2026-10-08T00:00:00Z"
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.mypy]
+strict = true
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["boto3.*", "botocore.*", "procrastinate.*", "jsonschema.*", "pypdfium2.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -1,0 +1,120 @@
+.rich-editor .ProseMirror {
+  outline: none;
+  min-height: 1.6em;
+  line-height: 1.8;
+  font-size: 15px;
+  word-break: keep-all;
+}
+.rich-editor .ProseMirror p { margin: 0 0 0.6em; }
+.rich-editor .ProseMirror p:last-child { margin-bottom: 0; }
+.rich-editor .ProseMirror h1 { font-size: 1.5em; margin: 0.4em 0; }
+.rich-editor .ProseMirror h2 { font-size: 1.3em; margin: 0.4em 0; }
+.rich-editor .ProseMirror h3 { font-size: 1.12em; margin: 0.4em 0; }
+.rich-editor .ProseMirror ul, .rich-editor .ProseMirror ol { padding-left: 1.4em; margin: 0 0 0.6em; }
+.rich-editor .ProseMirror li > p { margin: 0; }
+.rich-editor .ProseMirror a { color: #1d4ed8; text-decoration: underline; }
+.rich-editor .ProseMirror mark { padding: 0 2px; border-radius: 2px; }
+.rich-editor.is-readonly .ProseMirror { cursor: default; }
+
+/* 변수 칩: [서비스명] */
+.var-chip {
+  display: inline;
+  color: #1d4ed8;
+  font-weight: 700;
+  padding: 0 1px;
+  border-radius: 3px;
+  cursor: default;
+}
+.var-chip.is-empty { color: #b42318; background: #fde8e8; }
+.var-chip.is-selected { outline: 2px solid #818cf8; }
+
+/* 글자 선택·빈 줄에서 뜨는 서식 도구 막대 */
+.bubble-host {
+  /* body에 붙으므로 모달(200) 안 에디터에서도 보이게 그 위, 막대의 색상 메뉴(Mantine 팝오버 300)보다는 아래.
+     막대가 숨겨졌을 때 아래 글자를 가리지 않도록 클릭은 안쪽 막대만 받는다. */
+  z-index: 250;
+  pointer-events: none;
+}
+.bubble-toolbar {
+  background: #1f2433;
+  border-radius: 8px;
+  padding: 4px 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+.bubble-toolbar.is-hidden { visibility: hidden; pointer-events: none; }
+
+/* 빈 단락 안내 문구 */
+.rich-editor .ProseMirror .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #98a2b3;
+  pointer-events: none;
+}
+
+/* 문서 편집기: 단락 사이 삽입선 */
+.insert-line {
+  position: relative;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.insert-line::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  border-top: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+.insert-line:hover::before, .insert-line.is-open::before { border-top-color: #4f46e5; }
+.insert-line .insert-button { opacity: 0; transition: opacity 0.15s; z-index: 1; }
+.insert-line:hover .insert-button, .insert-line.is-open .insert-button { opacity: 1; }
+
+.block-card { position: relative; }
+.block-card .drag-handle {
+  cursor: grab;
+  color: #98a2b3;
+  user-select: none;
+  touch-action: none;
+  padding: 2px;
+  line-height: 1;
+}
+.block-card .drag-handle:active { cursor: grabbing; }
+.block-card.is-dragging { opacity: 0.6; }
+
+/* {{ 입력 시 변수 고르기 목록 */
+.variable-suggest {
+  z-index: 400; /* 모달(200) 위 */
+  min-width: 240px;
+  max-width: 360px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.16);
+  padding: 4px;
+  font-size: 14px;
+}
+.variable-suggest-title { color: #667085; font-size: 12px; padding: 4px 8px; }
+.variable-suggest-empty { color: #98a2b3; padding: 6px 8px; }
+.variable-suggest-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.variable-suggest-item.is-active { background: #eef2ff; }
+.variable-suggest-item .label { color: #1d4ed8; font-weight: 700; }
+.variable-suggest-item .key { color: #98a2b3; font-size: 12px; }
+.variable-suggest-item .value { margin-left: auto; color: #475467; font-size: 12px; }

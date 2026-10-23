@@ -1,0 +1,20 @@
+{#- KMS 문서 HTML. 미리보기·PDF 공용. 레이아웃 변경 시 RENDERER_VERSION을 올린다. -#}
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<style>
+{% include "_base.css" %}
+</style>
+</head>
+<body>
+<section class="document">
+  {% if preview %}<div class="preview-banner">미리보기 · 발행 전 문서입니다</div>{% endif %}
+  <h1>{{ title }}</h1>
+  {% for block in blocks %}
+  <div class="module" data-block-id="{{ block.id }}">{{ block.html }}</div>
+  {% endfor %}
+</section>
+</body>
+</html>

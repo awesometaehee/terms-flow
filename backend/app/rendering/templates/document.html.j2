@@ -1,0 +1,68 @@
+{#- 문서 HTML. 미리보기와 PDF가 같이 쓴다. 레이아웃 변경 시 RENDERER_VERSION을 올린다. -#}
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>{{ title }}</title>
+<style>
+{% include "_base.css" %}
+</style>
+</head>
+<body>
+{% for doc in documents %}
+<section class="document" data-document-type="{{ doc.type }}">
+  {% if preview %}<div class="preview-banner">미리보기 · {{ doc.label }} · 발행 전 문서입니다</div>{% endif %}
+  {% for block in doc.blocks %}
+    {% if block.kind == "heading" %}
+  <h{{ block.level }}>{{ block.text }}</h{{ block.level }}>
+    {% elif block.kind == "paragraph" %}
+      {% for lines in block.paragraphs %}
+  <p>{% for line in lines %}{{ line }}{% if not loop.last %}<br>{% endif %}{% endfor %}</p>
+      {% endfor %}
+    {% elif block.kind == "clauses" %}
+      {% for clause in block.clauses %}
+  <div class="clause">
+    <p class="clause-title">{% if clause.number %}{{ clause.number }} ({{ clause.title }}){% else %}{{ clause.title }}{% endif %}</p>
+    <div class="clause-body">{{ clause.html }}</div>
+  </div>
+      {% endfor %}
+    {% elif block.kind == "variant_table" %}
+  <table class="variant-table">
+    <colgroup><col class="label">{% for _ in block.table.columns %}<col>{% endfor %}</colgroup>
+    <thead>
+      <tr><th>품목</th>{% for column in block.table.columns %}<th>{{ column }}</th>{% endfor %}</tr>
+    </thead>
+    <tbody>
+      {% for row in block.table.rows %}
+        {% if row.kind == "group" %}
+      <tr class="group"><td colspan="{{ block.table.columns | length + 1 }}">{{ row.label }}</td></tr>
+        {% else %}
+      <tr class="{{ row.kind }}"><td class="label">{% if row.kind == "child" %}└ {% endif %}{{ row.label }}</td>{% for cell in row.cells %}<td class="cell">{{ cell }}</td>{% endfor %}</tr>
+        {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+      {% if block.table.footnotes %}
+  <div class="footnotes">
+        {% for note in block.table.footnotes %}
+    <p>※ {{ note }}</p>
+        {% endfor %}
+  </div>
+      {% endif %}
+    {% elif block.kind == "variant_prices" %}
+  <table class="prices">
+    <thead><tr><th>구성</th><th>금액</th></tr></thead>
+    <tbody>
+      {% for name, amount in block.rows %}
+      <tr><td>{{ name }}</td><td class="amount">{{ amount }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+    {% elif block.kind == "page_break" %}
+  <div class="page-break"></div>
+    {% endif %}
+  {% endfor %}
+</section>
+{% endfor %}
+</body>
+</html>

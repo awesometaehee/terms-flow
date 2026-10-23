@@ -1,0 +1,84 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://terms-flow.local/schemas/composition.v1.schema.json",
+  "title": "판매 구성 품목 구성 v1",
+  "description": "product_variants.composition_jsonb 형식. 그룹·항목 ID의 구성 내 유일성은 애플리케이션에서 추가 검사한다. 이 파일은 발행 후 수정하지 않고, 변경이 필요하면 v2 파일을 추가한다.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "groups"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "groups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/group" }
+    },
+    "footnotes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/nonBlankString" }
+    }
+  },
+  "$defs": {
+    "nonBlankString": {
+      "type": "string",
+      "pattern": "\\S"
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$",
+      "maxLength": 64
+    },
+    "quantity": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["value", "unit"],
+          "properties": {
+            "value": { "type": "number", "exclusiveMinimum": 0 },
+            "unit": { "$ref": "#/$defs/nonBlankString" }
+          }
+        }
+      ]
+    },
+    "childItem": {
+      "description": "하위 행. 첫 버전은 깊이 2단계로 제한하므로 children을 가질 수 없다.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "order"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/nonBlankString" },
+        "specification": { "type": ["string", "null"] },
+        "quantity": { "$ref": "#/$defs/quantity" },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/nonBlankString" } },
+        "order": { "type": "integer" }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "order"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/nonBlankString" },
+        "specification": { "type": ["string", "null"] },
+        "quantity": { "$ref": "#/$defs/quantity" },
+        "notes": { "type": "array", "items": { "$ref": "#/$defs/nonBlankString" } },
+        "order": { "type": "integer" },
+        "children": { "type": "array", "items": { "$ref": "#/$defs/childItem" } }
+      }
+    },
+    "group": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "order", "items"],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "label": { "$ref": "#/$defs/nonBlankString" },
+        "order": { "type": "integer" },
+        "items": { "type": "array", "items": { "$ref": "#/$defs/item" } }
+      }
+    }
+  }
+}
