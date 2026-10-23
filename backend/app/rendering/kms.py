@@ -9,7 +9,7 @@ from typing import Any
 
 from markupsafe import Markup
 
-from app import richtext
+from app import assets, richtext
 from app.rendering.html import template_env
 
 
@@ -30,10 +30,18 @@ def missing_variables(snapshot: Mapping[str, Any]) -> list[str]:
 
 
 def render_html(snapshot: Mapping[str, Any], *, preview: bool = False) -> str:
+    """preview: 브라우저 미리보기 (이미지는 /api/assets 주소로 불러온다).
+
+    발행(PDF)은 이미지를 data URI로 HTML에 넣는다.
+    """
     values = variable_values(snapshot)
     labels = {key: spec["label"] for key, spec in snapshot.get("variables", {}).items()}
+    image_src = None if preview else assets.data_uri
     blocks = [
-        {"id": b["id"], "html": Markup(richtext.to_html(b["content_json"], values, labels))}
+        {
+            "id": b["id"],
+            "html": Markup(richtext.to_html(b["content_json"], values, labels, image_src)),
+        }
         for b in snapshot["blocks"]
     ]
     return (

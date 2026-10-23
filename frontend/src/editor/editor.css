@@ -118,3 +118,75 @@
 .variable-suggest-item .label { color: #1d4ed8; font-weight: 700; }
 .variable-suggest-item .key { color: #98a2b3; font-size: 12px; }
 .variable-suggest-item .value { margin-left: auto; color: #475467; font-size: 12px; }
+
+/* --- 표 ----------------------------------------------------------------------- */
+.rich-editor .tableWrapper { overflow-x: auto; margin: 0.4em 0 0.8em; }
+.rich-editor table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+.rich-editor td, .rich-editor th {
+  border: 1px solid #98a2b3;
+  padding: 4px 8px;
+  vertical-align: middle;
+  position: relative;
+  min-width: 40px;
+  box-sizing: border-box;
+}
+.rich-editor th { font-weight: 700; text-align: center; background: #f2f4f7; }
+.rich-editor td > p, .rich-editor th > p { margin: 0; }
+/* 칸 여러 개를 끌어 고른 상태 */
+.rich-editor .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(79, 70, 229, 0.15);
+  pointer-events: none;
+}
+/* 열 경계를 끌어 너비 바꾸기 */
+.rich-editor .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background: #4f46e5;
+  pointer-events: none;
+}
+.rich-editor.resize-cursor, .rich-editor .resize-cursor { cursor: col-resize; }
+
+/* --- 단 나누기 --------------------------------------------------------------------- */
+.rich-editor .rt-columns { display: flex; gap: 16px; align-items: flex-start; margin: 0.4em 0 0.8em; }
+.rich-editor .rt-column { flex: 1 1 0; min-width: 0; }
+/* 편집할 때만 단 경계를 점선으로 보인다 */
+.rich-editor:not(.is-readonly) .rt-column { outline: 1px dashed #d0d5dd; outline-offset: 4px; border-radius: 2px; }
+
+/* --- 이미지 ------------------------------------------------------------------------ */
+.rich-editor img { max-width: 100%; height: auto; display: block; margin: 4px auto; }
+.rich-editor [data-resize-container] { margin: 4px auto; max-width: 100%; }
+.rich-editor .ProseMirror-selectednode img,
+.rich-editor img.ProseMirror-selectednode { outline: 2px solid #4f46e5; }
+.rich-editor [data-resize-handle] { z-index: 2; }
+.rich-editor [data-resize-handle="bottom-right"],
+.rich-editor [data-resize-handle="bottom-left"],
+.rich-editor [data-resize-handle="top-right"],
+.rich-editor [data-resize-handle="top-left"] {
+  width: 10px;
+  height: 10px;
+  background: #4f46e5;
+  border: 1px solid #fff;
+  border-radius: 2px;
+  opacity: 0;
+}
+.rich-editor [data-resize-handle="bottom-right"], .rich-editor [data-resize-handle="top-left"] { cursor: nwse-resize; }
+.rich-editor [data-resize-handle="bottom-left"], .rich-editor [data-resize-handle="top-right"] { cursor: nesw-resize; }
+.rich-editor [data-resize-container]:hover [data-resize-handle],
+.rich-editor .ProseMirror-selectednode [data-resize-handle] { opacity: 1; }
+
+/* --- 표·단·이미지 도구 막대 ------------------------------------------------------------ */
+.block-tools { max-width: min(760px, calc(100vw - 32px)); row-gap: 2px; }
+.block-tools .tools-label { color: #98a2b3; font-size: 11px; padding: 0 4px; }
+.cell-swatch { display: inline-block; width: 14px; height: 14px; border: 1px solid #98a2b3; border-radius: 2px; }

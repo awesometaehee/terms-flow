@@ -43,3 +43,12 @@
   .var { font-weight: 700; }
   .var-missing { color: #b42318; background: #fde8e8; }
   .module { margin: 0 0 3mm; }
+  /* 서식 본문: 표·단 나누기·이미지 (RENDERER_VERSION 2) */
+  table.rt-table { table-layout: auto; margin: 1mm 0 3mm; }
+  table.rt-table th, table.rt-table td { padding: 1mm 1.6mm; vertical-align: middle; }
+  table.rt-table th { text-align: center; }
+  table.rt-table p { margin: 0; }
+  table.rt-table ul, table.rt-table ol { margin: 0; }
+  .rt-columns { display: grid; gap: 4mm; align-items: start; margin: 0 0 3mm; }
+  .rt-column { min-width: 0; }
+  .rt-image { display: block; max-width: 100%; height: auto; margin: 1mm auto; }

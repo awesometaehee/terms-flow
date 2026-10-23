@@ -84,7 +84,7 @@ def test_rejects_unknown_nodes_marks_and_unsafe_values() -> None:
         ],
     }
     assert _paths(body) == [
-        "content_json.content[0]",
+        "content_json.content[0].attrs.src",  # 이미지는 이 시스템에 올린 것만
         "content_json.content[1].attrs.textAlign",
         "content_json.content[1].content[0].marks[0]",
         "content_json.content[1].content[1].marks[0].attrs.href",

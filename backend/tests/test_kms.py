@@ -184,7 +184,7 @@ def test_stale_save_and_invalid_blocks(client: TestClient, modules: dict[str, An
     )
     assert error_paths(res.json()) == [
         "blocks[0].clause_revision_no",
-        "blocks[1].content_json.content[0]",
+        "blocks[1].content_json.content[0].attrs.src",  # 이 시스템에 올린 이미지만
     ]
 
 

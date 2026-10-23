@@ -1,20 +1,27 @@
 // 서식 있는 본문 편집기. 글자를 선택하면 서식 도구 막대가 뜨고, {{ 를 입력하면 변수를 고를 수 있다.
+// 줄 처음에서 / 를 입력하면 표·단 나누기·이미지를 넣는다. 표·단·이미지 안에서는 그 도구 막대가 뜬다.
 // 저장 형식은 서버(app/richtext.py)가 허용하는 노드·서식만 쓴다.
 import "./editor.css";
 
-import { ActionIcon, ColorSwatch, Divider, Group, Menu, Popover, SimpleGrid, Tooltip } from "@mantine/core";
+import { ActionIcon, ColorSwatch, Divider, Group, Menu, Tooltip } from "@mantine/core";
 import { Highlight } from "@tiptap/extension-highlight";
+import { Table, TableRow } from "@tiptap/extension-table";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Color, TextStyle } from "@tiptap/extension-text-style";
 import { Placeholder } from "@tiptap/extensions";
-import { PluginKey, type EditorState } from "@tiptap/pm/state";
+import { NodeSelection, PluginKey, type EditorState } from "@tiptap/pm/state";
+import { CellSelection } from "@tiptap/pm/tables";
 import { EditorContent, useEditor, useEditorState, type Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { StarterKit } from "@tiptap/starter-kit";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, type RefObject } from "react";
 
 import type { RichDoc } from "../api/client";
 import { sameDoc } from "../lib/richdoc";
+import { BlockTools } from "./BlockTools";
+import { ColorPicker, appendToBody, useBubbleRepair, useEditorActive } from "./bubble";
+import { Column, Columns, ImagePaste, RichImage, RichTableCell, RichTableHeader } from "./layout";
+import { SlashCommand } from "./slash";
 import { Variable, VariableSuggestion, VariablesContext } from "./variables";
 
 const TEXT_COLORS = ["#111111", "#d92d20", "#dc6803", "#039855", "#1570ef", "#6941c6", "#667085"];
@@ -24,12 +31,9 @@ export const EMPTY_DOC: RichDoc = { type: "doc", content: [{ type: "paragraph" }
 
 // BubbleMenu 설정은 렌더링마다 새로 만들면 플러그인이 다시 등록되어 표시 상태를 잃는다. 모듈 상수로 둔다.
 const BUBBLE_OPTIONS = { placement: "top-start" } as const;
-// 막대를 body에 붙인다. 기본값(에디터 부모)이면 overflow: hidden인 카드 밖으로 나가는 부분이 잘린다.
-const appendToBody = () => document.body;
-
-// 글자를 선택했을 때만 보인다. 포커스에 따른 숨김은 Toolbar의 active가 맡는다.
+// 글자를 선택했을 때만 보인다 (이미지 선택은 이미지 도구가 맡는다). 포커스에 따른 숨김은 active가 맡는다.
 function shouldShowToolbar({ editor, state }: { editor: Editor; state: EditorState }): boolean {
-  return editor.isEditable && !state.selection.empty;
+  return editor.isEditable && !state.selection.empty && !(state.selection instanceof NodeSelection);
 }
 
 export function RichEditor({
@@ -70,7 +74,18 @@ export function RichEditor({
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Variable.configure({ getVariables }),
       VariableSuggestion.configure({ getVariables }),
-      Placeholder.configure({ placeholder: "내용을 입력하세요 — {{ 를 입력하면 변수를 넣을 수 있습니다" }),
+      Table.configure({ resizable: true, cellMinWidth: 40, lastColumnResizable: false }),
+      TableRow,
+      RichTableHeader,
+      RichTableCell,
+      Columns,
+      Column,
+      RichImage,
+      ImagePaste,
+      SlashCommand,
+      Placeholder.configure({
+        placeholder: "내용을 입력하세요 — {{ 변수 넣기 · 줄 처음에서 / 표·단 나누기·이미지",
+      }),
     ],
     content,
     editable,
@@ -97,13 +112,34 @@ export function RichEditor({
   if (!editor) return null;
   return (
     <div className={`rich-editor${editable ? "" : " is-readonly"}`}>
-      {editable && <Toolbar editor={editor} />}
+      {editable && <EditorTools editor={editor} />}
       <EditorContent editor={editor} />
     </div>
   );
 }
 
-function Toolbar({ editor }: { editor: Editor }) {
+// 서식 막대와 표·단·이미지 도구. 둘 중 어느 막대를 눌러도 에디터가 '사용 중'으로 남는다.
+function EditorTools({ editor }: { editor: Editor }) {
+  const textRef = useRef<HTMLDivElement>(null);
+  const blockRef = useRef<HTMLDivElement>(null);
+  const active = useEditorActive(editor, [textRef, blockRef]);
+  return (
+    <>
+      <Toolbar editor={editor} active={active} toolbarRef={textRef} />
+      <BlockTools editor={editor} active={active} toolbarRef={blockRef} />
+    </>
+  );
+}
+
+function Toolbar({
+  editor,
+  active,
+  toolbarRef,
+}: {
+  editor: Editor;
+  active: boolean;
+  toolbarRef: RefObject<HTMLDivElement | null>;
+}) {
   const state = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -121,59 +157,29 @@ function Toolbar({ editor }: { editor: Editor }) {
     }),
   });
   const chain = () => editor.chain().focus();
-  const toolbarRef = useRef<HTMLDivElement>(null);
-  const hostRef = useRef<HTMLDivElement>(null);
   const pluginKey = useMemo(() => new PluginKey(`bubbleMenu-${Math.random().toString(36).slice(2)}`), []);
-
-  // 개발 모드(React StrictMode)에서는 BubbleMenu 플러그인이 등록→해제→재등록되면서, 해제 정리 작업이
-  // 다음 프레임에 막대 요소를 DOM에서 떼어 낸다. 플러그인은 보이는 상태로 알고 있어 다시 나타나지 않으므로,
-  // 보여야 하는데 요소가 빠져 있으면 숨김→표시로 되살린다. (운영 빌드에서는 일어나지 않는다.)
-  useEffect(() => {
-    const repair = () =>
-      requestAnimationFrame(() => {
-        const host = hostRef.current;
-        if (!host || host.isConnected || editor.isDestroyed) return;
-        if (!shouldShowToolbar({ editor, state: editor.state })) return;
-        editor.view.dispatch(editor.state.tr.setMeta(pluginKey, "hide"));
-        editor.view.dispatch(editor.state.tr.setMeta(pluginKey, "show"));
-      });
-    editor.on("focus", repair);
-    editor.on("selectionUpdate", repair);
-    return () => {
-      editor.off("focus", repair);
-      editor.off("selectionUpdate", repair);
-    };
-  }, [editor, pluginKey]);
-
-  // 포커스가 이 에디터나 도구 막대 안에 있을 때만 막대를 보인다.
-  // (막대 안의 메뉴를 쓴 뒤 바깥을 누르면 에디터는 blur를 받지 못하므로 직접 추적한다.)
-  const [active, setActive] = useState(editor.isFocused);
-  useEffect(() => {
-    const inside = (node: EventTarget | null) =>
-      node instanceof Node && (editor.view.dom.contains(node) || !!toolbarRef.current?.contains(node));
-    const onFocus = () => setActive(true);
-    const onBlur = ({ event }: { event: FocusEvent }) => {
-      if (!inside(event.relatedTarget)) setActive(false);
-    };
-    const onMouseDown = (event: MouseEvent) => {
-      if (!inside(event.target)) setActive(false);
-    };
-    editor.on("focus", onFocus);
-    editor.on("blur", onBlur);
-    document.addEventListener("mousedown", onMouseDown, true);
-    return () => {
-      editor.off("focus", onFocus);
-      editor.off("blur", onBlur);
-      document.removeEventListener("mousedown", onMouseDown, true);
+  const hostRef = useBubbleRepair(editor, pluginKey, shouldShowToolbar);
+  // 표 칸 여러 개를 골랐을 때는 칸을 가리지 않도록 표 위쪽에 띄운다. (그 밖에는 선택한 글자 위)
+  const anchor = useCallback(() => {
+    const { selection } = editor.state;
+    if (!(selection instanceof CellSelection)) return null;
+    const cell = editor.view.nodeDOM(selection.$anchorCell.pos) as HTMLElement | null;
+    const table = cell?.closest("table");
+    if (!table) return null;
+    return {
+      getBoundingClientRect: () => {
+        const rect = table.getBoundingClientRect();
+        return new DOMRect(rect.left, Math.max(rect.top, 64), rect.width, 0);
+      },
     };
   }, [editor]);
 
-  const btn = (label: string, active: boolean, onClick: () => void, text: string) => (
+  const btn = (label: string, on: boolean, onClick: () => void, text: string) => (
     <Tooltip label={label} withinPortal={false}>
       <ActionIcon
-        variant={active ? "filled" : "subtle"}
-        color={active ? "indigo" : "gray"}
-        c={active ? undefined : "gray.2"}
+        variant={on ? "filled" : "subtle"}
+        color={on ? "indigo" : "gray"}
+        c={on ? undefined : "gray.2"}
         size="sm"
         onMouseDown={(e) => e.preventDefault()}
         onClick={onClick}
@@ -199,6 +205,7 @@ function Toolbar({ editor }: { editor: Editor }) {
       pluginKey={pluginKey}
       options={BUBBLE_OPTIONS}
       appendTo={appendToBody}
+      getReferencedVirtualElement={anchor}
       className="bubble-host"
       shouldShow={shouldShowToolbar}
     >
@@ -252,49 +259,5 @@ function Toolbar({ editor }: { editor: Editor }) {
         {btn("링크", state.link, setLink, "🔗")}
       </Group>
     </BubbleMenu>
-  );
-}
-
-function ColorPicker({
-  label,
-  colors,
-  current,
-  swatch,
-  onPick,
-}: {
-  label: string;
-  colors: string[];
-  current: string | null;
-  swatch: React.ReactNode;
-  onPick: (color: string | null) => void;
-}) {
-  return (
-    <Popover withinPortal={false} position="bottom" shadow="md" trapFocus={false} returnFocus={false}>
-      <Popover.Target>
-        <Tooltip label={label} withinPortal={false}>
-          <ActionIcon variant="subtle" c="gray.2" size="sm" onMouseDown={(e) => e.preventDefault()} aria-label={label}>
-            {swatch}
-          </ActionIcon>
-        </Tooltip>
-      </Popover.Target>
-      <Popover.Dropdown p={6}>
-        <SimpleGrid cols={colors.length + 1} spacing={4}>
-          {colors.map((c) => (
-            <ColorSwatch
-              key={c}
-              color={c}
-              size={18}
-              component="button"
-              style={{ cursor: "pointer", outline: c === current ? "2px solid #4f46e5" : undefined }}
-              onMouseDown={(e: React.MouseEvent) => e.preventDefault()}
-              onClick={() => onPick(c)}
-            />
-          ))}
-          <ActionIcon size={18} variant="default" onMouseDown={(e) => e.preventDefault()} onClick={() => onPick(null)} aria-label="지우기">
-            ✕
-          </ActionIcon>
-        </SimpleGrid>
-      </Popover.Dropdown>
-    </Popover>
   );
 }
