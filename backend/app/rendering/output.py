@@ -114,7 +114,8 @@ class _BrowserHost:
     async def _start(self) -> None:
         await self._shutdown()
         self._playwright = await async_playwright().start()
-        self._browser = await self._playwright.chromium.launch()
+        # 컨테이너의 작은 /dev/shm 대신 /tmp를 쓴다 (큰 문서 렌더링 중 멈춤 방지).
+        self._browser = await self._playwright.chromium.launch(args=["--disable-dev-shm-usage"])
         self._page = await self._browser.new_page()
 
     async def _shutdown(self) -> None:
