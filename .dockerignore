@@ -10,10 +10,3 @@ docs
 **/.ruff_cache
 **/node_modules
 **/dist
-terms-flow
-.claude
-**/*.tsbuildinfo
-**/.env
-**/.env.*
-!**/.env.example
-backend/data

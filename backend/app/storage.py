@@ -24,7 +24,6 @@ def _local_path(key: str) -> Path:
 @lru_cache
 def get_s3_client() -> Any:
     import boto3
-    from botocore.config import Config
 
     settings = get_settings()
     return boto3.client(
@@ -33,7 +32,6 @@ def get_s3_client() -> Any:
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=settings.s3_secret_key,
         region_name=settings.s3_region,
-        config=Config(s3={"addressing_style": "path" if settings.s3_force_path_style else "auto"}),
     )
 
 

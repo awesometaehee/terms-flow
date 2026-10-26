@@ -10,8 +10,6 @@ KMS(지식 관리 시스템): 재사용 단락(모듈)을 골라 끌어서 조�
 **개발은 로컬, 운영은 Docker**: 개발할 때는 PC에 설치한 PostgreSQL과 `uv`·`pnpm`으로 직접 실행하고,
 운영 서버에는 `docker-compose.yml`로 배포한다.
 
-> 현업 검토용 무료 임시 배포(Hugging Face Spaces + Supabase)는 [DEPLOY.md](DEPLOY.md)를 따른다.
-
 ## 구성
 
 | 경로 | 내용 |
