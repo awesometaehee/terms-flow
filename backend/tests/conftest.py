@@ -58,6 +58,8 @@ BUSINESS_TABLES = (
     "variables",
     "tags",
     "categories",
+    "drafts",
+    "images",
     "procrastinate_jobs",
 )
 

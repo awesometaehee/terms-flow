@@ -11,6 +11,7 @@ from app.api import (
     document_sets,
     drafts,
     health,
+    images,
     imports,
     kms,
     products,
@@ -37,5 +38,6 @@ for module in (
     assets,
     imports,
     drafts,
+    images,
 ):
     app.include_router(module.router, prefix="/api")

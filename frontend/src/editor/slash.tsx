@@ -6,6 +6,7 @@ import { Suggestion, exitSuggestion, type SuggestionKeyDownProps, type Suggestio
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 
 import { pickImageFile, uploadImage } from "./layout";
+import { openImagePicker } from "./imagePicker";
 import { openTablePicker } from "./tablePicker";
 
 const SLASH_KEY = new PluginKey("slashCommand");
@@ -47,8 +48,8 @@ const ITEMS: SlashItem[] = [
   },
   {
     title: "이미지",
-    hint: "PNG·JPG·GIF·WEBP (붙여 넣기·끌어 놓기도 됩니다)",
-    keywords: "이미지 사진 그림 image",
+    hint: "파일 올리기 (붙여 넣기·끌어 놓기도 됩니다). 자료실에도 쌓입니다",
+    keywords: "이미지 사진 그림 image 올리기 업로드",
     run: (editor, range) => {
       editor.chain().focus().deleteRange(range).run();
       void (async () => {
@@ -61,6 +62,15 @@ const ITEMS: SlashItem[] = [
           window.alert((e as Error).message);
         }
       })();
+    },
+  },
+  {
+    title: "자료실 이미지",
+    hint: "이미지 자료실에서 골라 넣기 (여러 장)",
+    keywords: "자료실 이미지 사진 그림 image library",
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      openImagePicker(editor);
     },
   },
   {

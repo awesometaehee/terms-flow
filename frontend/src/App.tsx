@@ -4,6 +4,7 @@ import { useState } from "react";
 import { BulkUpdateList, BulkUpdateNew, BulkUpdateResult } from "./pages/BulkUpdates";
 import { DocumentEditor } from "./pages/DocumentEditor";
 import { DocumentList } from "./pages/Documents";
+import { ImageLibrary } from "./pages/Images";
 import { ModuleDetail, ModuleList } from "./pages/Modules";
 import { ProductDetail } from "./pages/ProductDetail";
 import { ProductList } from "./pages/ProductList";
@@ -16,6 +17,7 @@ const NAV = [
   { path: "documents", label: "문서" },
   { path: "modules", label: "템플릿" },
   { path: "variables", label: "치환 항목" },
+  { path: "images", label: "이미지" },
   { path: "bulk-updates", label: "일괄 반영 작업" },
 ];
 const PRODUCT_NAV = [{ path: "products", label: "상품 문서 (약관·설명서)" }];
@@ -29,6 +31,8 @@ function Page({ route }: { route: string[] }) {
       return id ? <ModuleDetail key={id} id={id} /> : <ModuleList />;
     case "variables":
       return <VariableList />;
+    case "images":
+      return <ImageLibrary />;
     case "search":
       return <SearchPage />;
     case "bulk-updates":

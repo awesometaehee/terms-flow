@@ -9,6 +9,8 @@ import { Plugin, PluginKey, TextSelection, type Transaction } from "@tiptap/pm/s
 import { TableMap, columnResizingPluginKey } from "@tiptap/pm/tables";
 import type { EditorView, NodeView, ViewMutationRecord } from "@tiptap/pm/view";
 
+import { uploadLibraryImage } from "../lib/images";
+
 const CELL_CONTENT = "(paragraph | heading | bulletList | orderedList | image)+";
 const COLUMN_CONTENT = "(paragraph | heading | bulletList | orderedList | image | table)+";
 
@@ -550,12 +552,9 @@ function resetWidths(tr: Transaction, pos: number) {
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"];
 
 // 이미지를 서버에 올리고 본문에 넣을 주소(/api/assets/...)를 받는다.
+// 이미지를 이미지 자료실에 올리고 본문에 넣을 주소(/api/assets/...)를 받는다.
 export async function uploadImage(file: File): Promise<string> {
-  if (!IMAGE_TYPES.includes(file.type)) throw new Error("PNG·JPG·GIF·WEBP 이미지만 넣을 수 있습니다.");
-  const res = await fetch("/api/assets", { method: "POST", body: file, headers: { "Content-Type": file.type } });
-  const body = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(body?.errors?.[0]?.message ?? body?.message ?? "이미지를 올리지 못했습니다.");
-  return body.url as string;
+  return (await uploadLibraryImage(file)).url;
 }
 
 export function pickImageFile(): Promise<File | null> {

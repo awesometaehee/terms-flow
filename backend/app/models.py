@@ -505,7 +505,8 @@ class DocumentBlock(Base):
         sa.ForeignKey("clause_revisions.id")
     )
     # MODULE: 문서 안에서 고친 본문 (NULL이면 원본 그대로), TEXT: 단락 본문
-    content_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # none_as_null: 원본 그대로는 SQL NULL로 저장한다 (JSON null은 IS NULL 조건에 안 걸린다).
+    content_json: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
 
     document: Mapped[Document] = relationship(back_populates="blocks")
     clause: Mapped[Clause | None] = relationship(lazy="joined")
@@ -584,3 +585,20 @@ class Draft(Base):
     updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()
     )
+
+
+class Image(Base):
+    """이미지 자료실의 이미지. 파일은 저장소 assets/에 한 번 저장하고 바꾸지 않는다."""
+
+    __tablename__ = "images"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    name: Mapped[str] = mapped_column(sa.String(200))
+    # 본문 이미지 노드의 src (/api/assets/<파일>)
+    url: Mapped[str] = mapped_column(sa.String(200), unique=True)
+    content_type: Mapped[str] = mapped_column(sa.String(50))
+    size_bytes: Mapped[int] = mapped_column(sa.BigInteger)
+    width: Mapped[int | None] = mapped_column(sa.Integer)
+    height: Mapped[int | None] = mapped_column(sa.Integer)
+    created_at: Mapped[datetime] = _created_at()
+    deleted_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))

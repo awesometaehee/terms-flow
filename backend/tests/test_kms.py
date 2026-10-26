@@ -404,3 +404,22 @@ def test_delete_document(client: TestClient, modules: dict[str, Any]) -> None:
     res = client.delete(f"/api/documents/{ended['id']}")
     assert res.status_code == 409
     assert res.json()["code"] == "DOCUMENT_ENDED"
+
+
+def test_variable_used_by_unmodified_block_of_older_revision(
+    client: TestClient, modules: dict[str, Any]
+) -> None:
+    # 문서가 원본 그대로 쓰는 예전 템플릿 버전에만 치환 항목이 남아 있어도 지울 수 없다
+    create_variable(client, "old_only", "[샘플] 예전 버전에만")
+    module = create_module(client, "kms.oldrev", doc([text("[샘플] "), var("old_only")]))
+    document = create_document(client, title="[샘플] 예전 버전 문서")
+    save(client, document, [module_block(module)])
+    post(
+        client,
+        f"/api/clauses/{module['id']}/revisions",
+        {"base_revision_no": 1, "content_json": doc([text("[샘플] 바뀜")]), "change_reason": "x"},
+    )
+    target = next(v for v in client.get("/api/variables").json() if v["key"] == "old_only")
+    res = client.delete(f"/api/variables/{target['id']}")
+    assert res.status_code == 409
+    assert "[샘플] 예전 버전 문서" in res.json()["message"]

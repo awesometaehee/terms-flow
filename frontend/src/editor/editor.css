@@ -345,3 +345,17 @@
   pointer-events: none;
   white-space: nowrap;
 }
+
+/* --- 이미지 자료실 ------------------------------------------------------------------ */
+.image-thumb { height: 140px; background: #f2f4f7; display: flex; align-items: center; justify-content: center; }
+.image-thumb img { max-width: 100%; max-height: 140px; object-fit: contain; }
+.image-drop { border-style: dashed; }
+.image-drop.is-dragging { border-color: #4f46e5; background: #eef2ff; }
+.image-picker-search { margin-left: 12px; padding: 4px 8px; border: 1px solid #d0d5dd; border-radius: 6px; font-size: 13px; width: 220px; }
+.image-picker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.image-picker-item { display: flex; flex-direction: column; gap: 4px; padding: 6px; border: 1px solid #d0d5dd; border-radius: 8px; background: #fff; cursor: pointer; text-align: left; }
+.image-picker-item.is-picked { border-color: #4f46e5; box-shadow: 0 0 0 2px #c7d2fe; }
+.image-picker-thumb { position: relative; height: 110px; background: #f2f4f7; display: flex; align-items: center; justify-content: center; border-radius: 4px; }
+.image-picker-thumb img { max-width: 100%; max-height: 110px; object-fit: contain; }
+.image-picker-order { position: absolute; top: 4px; right: 4px; min-width: 22px; height: 22px; border-radius: 11px; background: #4f46e5; color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.image-picker-name { font-size: 12px; color: #344054; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
