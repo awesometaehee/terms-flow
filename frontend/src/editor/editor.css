@@ -136,8 +136,12 @@
   min-width: 40px;
   box-sizing: border-box;
 }
-.rich-editor th { font-weight: 700; text-align: center; background: #f2f4f7; }
-.rich-editor td > p, .rich-editor th > p { margin: 0; }
+/* 머리글 칸은 굵게·가운데만. 배경색은 넣지 않는다 (필요하면 칸 배경색으로 직접 지정). */
+.rich-editor th { font-weight: 700; text-align: center; background: none; }
+/* 칸 안 문단은 여백 없이. 열 경계에 마우스를 올리면 칸 끝에 너비 조절 막대가 붙어 문단이 :last-child가 아니게 되므로
+   일반 문단 여백 규칙(.ProseMirror p)보다 강하게 지정해야 칸 높이가 바뀌지 않는다. */
+.rich-editor .ProseMirror td > p, .rich-editor .ProseMirror th > p { margin: 0; }
+.rich-editor .ProseMirror td > p + p, .rich-editor .ProseMirror th > p + p { margin-top: 0.3em; }
 /* 칸 여러 개를 끌어 고른 상태 */
 .rich-editor .selectedCell::after {
   content: "";
@@ -159,7 +163,53 @@
 .rich-editor.resize-cursor, .rich-editor .resize-cursor { cursor: col-resize; }
 
 /* --- 단 나누기 --------------------------------------------------------------------- */
-.rich-editor .rt-columns { display: flex; gap: 16px; align-items: flex-start; margin: 0.4em 0 0.8em; }
+.rich-editor .rt-columns-wrap { position: relative; margin: 0.4em 0 0.8em; }
+.rich-editor .rt-columns { display: flex; gap: 16px; align-items: flex-start; }
+/* 단 경계 손잡이: 경계에 마우스를 올리면 보인다 */
+.rich-editor .columns-handle {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 12px;
+  margin-left: -6px;
+  cursor: col-resize;
+  z-index: 2;
+}
+.rich-editor .columns-handle::after {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-radius: 1px;
+  background: #4f46e5;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.rich-editor .columns-handle:hover::after, .rich-editor .columns-handle.is-active::after { opacity: 1; }
+.rich-editor.is-readonly .columns-handle { display: none; }
+.rich-editor .rt-columns-wrap.is-resizing { cursor: col-resize; user-select: none; }
+/* 끄는 동안 미리 보기 (ColumnsView가 --col-N에 비율을 넣는다) */
+.rich-editor .rt-columns-wrap.is-resizing > .rt-columns > .rt-column:nth-child(1) { flex-grow: var(--col-0) !important; }
+.rich-editor .rt-columns-wrap.is-resizing > .rt-columns > .rt-column:nth-child(2) { flex-grow: var(--col-1) !important; }
+.rich-editor .rt-columns-wrap.is-resizing > .rt-columns > .rt-column:nth-child(3) { flex-grow: var(--col-2) !important; }
+.rich-editor .rt-columns-wrap.is-resizing > .rt-columns > .rt-column:nth-child(4) { flex-grow: var(--col-3) !important; }
+.rich-editor .columns-ratio-label {
+  position: absolute;
+  top: -26px;
+  transform: translateX(-50%);
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #1f2433;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  display: none;
+}
+.rich-editor .columns-ratio-label.is-visible { display: block; }
 .rich-editor .rt-column { flex: 1 1 0; min-width: 0; }
 /* 편집할 때만 단 경계를 점선으로 보인다 */
 .rich-editor:not(.is-readonly) .rt-column { outline: 1px dashed #d0d5dd; outline-offset: 4px; border-radius: 2px; }
@@ -190,3 +240,108 @@
 .block-tools { max-width: min(760px, calc(100vw - 32px)); row-gap: 2px; }
 .block-tools .tools-label { color: #98a2b3; font-size: 11px; padding: 0 4px; }
 .cell-swatch { display: inline-block; width: 14px; height: 14px; border: 1px solid #98a2b3; border-radius: 2px; }
+
+/* 새 모듈 창: 넓은 편집 영역 전체를 눌러 쓸 수 있게 한다 */
+.editor-card-tall .rich-editor .ProseMirror { min-height: 50vh; }
+
+/* --- 표 크기 고르기 ----------------------------------------------------------------- */
+.table-picker-host { position: fixed; top: 0; left: 0; z-index: 400; } /* 화면 기준. 모달(200)·도구 막대(250) 위 */
+.table-picker {
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.16);
+  padding: 10px 12px;
+  font-size: 13px;
+  color: #101828;
+}
+.table-picker-title { margin-bottom: 8px; color: #475467; }
+.table-picker-title b { color: #4f46e5; }
+.table-picker-grid { display: grid; gap: 2px; outline: none; }
+.table-picker-grid:focus-visible { outline: 2px solid #c7d2fe; outline-offset: 2px; }
+.table-picker-cell {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #d0d5dd;
+  border-radius: 2px;
+  background: #fff;
+  cursor: pointer;
+}
+.table-picker-cell.is-on { background: #c7d2fe; border-color: #818cf8; }
+.table-picker-cell.is-header { font-weight: 700; border-color: #4f46e5; }
+.table-picker-inputs { display: flex; gap: 10px; align-items: center; margin-top: 10px; }
+.table-picker-inputs input[type="number"] {
+  width: 56px;
+  padding: 3px 6px;
+  border: 1px solid #d0d5dd;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.table-picker-check { display: flex; gap: 4px; align-items: center; color: #475467; }
+.table-picker-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 10px; }
+.table-picker-actions button {
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  border: 1px solid #d0d5dd;
+  background: #fff;
+}
+.table-picker-actions .table-picker-ok { background: #4f46e5; border-color: #4f46e5; color: #fff; font-weight: 600; }
+.table-picker-hint { margin-top: 6px; color: #98a2b3; font-size: 11px; }
+
+/* --- PDF에서 표 가져오기 ------------------------------------------------------------- */
+.pdf-import-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 400; /* 모달(200) 위 */
+  background: rgba(16, 24, 40, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pdf-import {
+  width: min(1100px, calc(100vw - 48px));
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 16px 40px rgba(16, 24, 40, 0.25);
+  font-size: 14px;
+  outline: none;
+}
+.pdf-import-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid #eaecf0; }
+.pdf-import-file { color: #667085; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pdf-import-x { margin-left: auto; border: 0; background: none; font-size: 16px; cursor: pointer; color: #667085; }
+.pdf-import-body { overflow: auto; padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+.pdf-import-msg { color: #475467; }
+.pdf-import-msg.is-error { color: #b42318; }
+.pdf-import-item { display: block; border: 1px solid #d0d5dd; border-radius: 8px; padding: 10px 12px; cursor: pointer; }
+.pdf-import-item.is-checked { border-color: #4f46e5; box-shadow: 0 0 0 2px #c7d2fe; }
+.pdf-import-item-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; font-weight: 600; }
+.pdf-import-preview { max-height: 360px; overflow: auto; font-size: 12px; pointer-events: none; }
+.pdf-import-preview table { border-collapse: collapse; table-layout: fixed; width: 100%; }
+.pdf-import-preview td, .pdf-import-preview th { border: 1px solid #98a2b3; padding: 2px 4px; vertical-align: middle; }
+.pdf-import-preview p { margin: 0; }
+.pdf-import-preview img { max-width: 100%; height: auto; display: block; margin: 2px auto; }
+.pdf-import-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 18px; border-top: 1px solid #eaecf0; }
+.pdf-import-actions button { padding: 6px 14px; border-radius: 6px; border: 1px solid #d0d5dd; background: #fff; cursor: pointer; }
+.pdf-import-actions .is-primary { background: #4f46e5; border-color: #4f46e5; color: #fff; font-weight: 600; }
+.pdf-import-actions .is-primary:disabled { background: #c7d2fe; border-color: #c7d2fe; cursor: default; }
+
+/* --- 행 높이 끌기 ----------------------------------------------------------------- */
+.rich-editor .ProseMirror.row-resize-cursor, .rich-editor .ProseMirror.row-resize-cursor * { cursor: row-resize !important; }
+.row-resize-label {
+  position: fixed;
+  z-index: 400;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #1f2433;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  white-space: nowrap;
+}

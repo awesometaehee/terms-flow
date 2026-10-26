@@ -44,9 +44,11 @@
   .var-missing { color: #b42318; background: #fde8e8; }
   .module { margin: 0 0 3mm; }
   /* 서식 본문: 표·단 나누기·이미지 (RENDERER_VERSION 2) */
-  table.rt-table { table-layout: auto; margin: 1mm 0 3mm; }
+  /* 편집기와 같이 용지 너비에 맞추고 열은 비율로 나눈다 (RENDERER_VERSION 3) */
+  table.rt-table { table-layout: fixed; width: 100%; margin: 1mm 0 3mm; }
   table.rt-table th, table.rt-table td { padding: 1mm 1.6mm; vertical-align: middle; }
-  table.rt-table th { text-align: center; }
+  /* 머리글 칸 배경색은 기본으로 넣지 않는다 (칸 배경색을 지정하면 그 색) (RENDERER_VERSION 4) */
+  table.rt-table th { text-align: center; background: none; }
   table.rt-table p { margin: 0; }
   table.rt-table ul, table.rt-table ol { margin: 0; }
   .rt-columns { display: grid; gap: 4mm; align-items: start; margin: 0 0 3mm; }

@@ -21,7 +21,7 @@ export function MissingValues({
 }) {
   if (missing.length === 0) return null;
   return (
-    <Alert color="orange" variant="light" title="새 변수 값을 입력하세요">
+    <Alert color="orange" variant="light" title="새 치환 항목 값을 입력하세요">
       <Text size="sm" mb="xs">
         이 값이 없으면 PDF를 만들 수 없습니다. 입력한 값은 값이 비어 있는 문서에만 들어갑니다.
       </Text>

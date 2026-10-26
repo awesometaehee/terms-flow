@@ -385,12 +385,12 @@ class BulkUpdateItem(Base):
 
 class DocumentStatus(enum.StrEnum):
     DRAFT = "DRAFT"  # 작성 중
-    ACTIVE = "ACTIVE"  # 사용 중 (공통 모듈 일괄 반영 대상)
+    ACTIVE = "ACTIVE"  # 사용 중 (템플릿 일괄 반영 대상)
     ENDED = "ENDED"  # 종료 (읽기 전용)
 
 
 class BlockKind(enum.StrEnum):
-    MODULE = "MODULE"  # 모듈을 가져온 단락 (기준 리비전 + 선택적 문서 내 수정본)
+    MODULE = "MODULE"  # 템플릿을 가져온 단락 (기준 리비전 + 선택적 문서 내 수정본)
     TEXT = "TEXT"  # 이 문서에만 있는 단락
 
 
@@ -565,3 +565,22 @@ class PublicationFile(Base):
     sha256: Mapped[str] = mapped_column(sa.String(64))
     size_bytes: Mapped[int] = mapped_column(sa.BigInteger)
     created_at: Mapped[datetime] = _created_at()
+
+
+class Draft(Base):
+    """자동 임시저장본. 저장하지 않은 편집 상태(화면 형식 그대로)를 보관해 다른 PC에서도 이어 쓴다.
+
+    로그인이 없으므로 사람별이 아니라 모듈·문서별 하나다 ("module:<id>", "document:<id>").
+    아직 만들지 않은 새 모듈은 "module-new:<임의 id>"로 여러 개 둘 수 있다.
+    """
+
+    __tablename__ = "drafts"
+
+    key: Mapped[str] = mapped_column(sa.String(100), primary_key=True)
+    base: Mapped[str] = mapped_column(sa.String(50))
+    value: Mapped[dict[str, Any]] = mapped_column("value_jsonb", JSONB)
+    # 목록에 보일 이름 (새 모듈의 제목)
+    title: Mapped[str | None] = mapped_column(sa.String(200))
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), server_default=sa.func.now(), onupdate=sa.func.now()
+    )

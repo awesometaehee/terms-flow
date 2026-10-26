@@ -6,6 +6,7 @@ import { Suggestion, exitSuggestion, type SuggestionKeyDownProps, type Suggestio
 import { forwardRef, useEffect, useImperativeHandle, useState } from "react";
 
 import { pickImageFile, uploadImage } from "./layout";
+import { openTablePicker } from "./tablePicker";
 
 const SLASH_KEY = new PluginKey("slashCommand");
 
@@ -22,11 +23,13 @@ type SlashItem = {
 const ITEMS: SlashItem[] = [
   {
     title: "표",
-    hint: "3×3, 첫 행은 머리글",
+    hint: "행·열 수를 골라 넣기",
     keywords: "표 테이블 table",
     topLevelOnly: "table",
-    run: (editor, range) =>
-      editor.chain().focus().deleteRange(range).insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+    run: (editor, range) => {
+      editor.chain().focus().deleteRange(range).run();
+      openTablePicker(editor);
+    },
   },
   {
     title: "2단",

@@ -8,4 +8,4 @@
 """
 
 # 렌더링 결과(HTML 구조·CSS·파일 구성)가 바뀌면 올린다. manifest의 renderer_version에 기록된다.
-RENDERER_VERSION = "2"
+RENDERER_VERSION = "4"

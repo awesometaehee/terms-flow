@@ -18,6 +18,17 @@ describe("sameDoc", () => {
     expect(sameDoc(a, b)).toBe(false);
   });
 
+  it("treats table cell span 1 as default", () => {
+    const cell = (attrs?: object) => ({ type: "tableCell", ...(attrs ? { attrs } : {}), content: [{ type: "paragraph" }] });
+    const a = { type: "doc", content: [{ type: "table", content: [{ type: "tableRow", content: [cell()] }] }] };
+    const b = {
+      type: "doc",
+      content: [{ type: "table", content: [{ type: "tableRow", content: [cell({ colspan: 1, rowspan: 1, colwidth: null })] }] }],
+    };
+    expect(sameDoc(a, b)).toBe(true);
+    expect(normalizeDoc(cell({ colspan: 2, rowspan: 1 }))).toEqual({ attrs: { colspan: 2 }, content: [{ type: "paragraph" }], type: "tableCell" });
+  });
+
   it("keeps meaningful attrs", () => {
     expect(normalizeDoc({ type: "variable", attrs: { key: "x", other: null } })).toEqual({ attrs: { key: "x" }, type: "variable" });
   });

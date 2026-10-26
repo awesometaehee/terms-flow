@@ -24,6 +24,7 @@ import { api, type ClauseDetail, type ClauseSummary, type RichDoc, type TagOut }
 import { categoryOptions, useCategories } from "../components/CategoryTree";
 import { Loading } from "../components/common";
 import { RichEditor } from "../editor/RichEditor";
+import { SHOW_PRODUCT_FEATURE } from "../features";
 
 type Picked = { id: string; title: string };
 
@@ -59,6 +60,8 @@ export function ModulePicker({
     enabled: previewId !== null,
   });
   const latest = detail.data?.revisions[detail.data.revisions.length - 1];
+  // 상품 기능을 숨기면 상품 템플릿 전용 모듈도 빼고 보인다.
+  const visible = (modules.data ?? []).filter((m) => SHOW_PRODUCT_FEATURE || !m.document_type);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
 
   const isPicked = (id: string) => picked.some((p) => p.id === id);
@@ -92,7 +95,7 @@ export function ModulePicker({
   };
 
   return (
-    <Modal opened={opened} onClose={close} size="90%" title="모듈 가져오기">
+    <Modal opened={opened} onClose={close} size="90%" title="템플릿 가져오기">
       <Stack>
         <Group grow>
           <TextInput placeholder="제목·본문 검색" value={q} onChange={(e) => setQ(e.currentTarget.value)} data-autofocus />
@@ -109,7 +112,7 @@ export function ModulePicker({
           <Grid.Col span={4}>
             <Group justify="space-between" mb={6}>
               <Text size="sm" fw={600}>
-                모듈 목록
+                템플릿 목록
               </Text>
               <Button
                 size="compact-xs"
@@ -128,7 +131,7 @@ export function ModulePicker({
             <ScrollArea h={440}>
               {modules.isPending && <Loading />}
               <Stack gap={6}>
-                {modules.data?.map((m) => (
+                {visible.map((m) => (
                   <Card
                     key={m.id}
                     withBorder
@@ -166,7 +169,7 @@ export function ModulePicker({
                     </Group>
                   </Card>
                 ))}
-                {modules.data?.length === 0 && <Text c="dimmed" size="sm">모듈이 없습니다.</Text>}
+                {modules.data && visible.length === 0 && <Text c="dimmed" size="sm">템플릿이 없습니다.</Text>}
               </Stack>
             </ScrollArea>
           </Grid.Col>
@@ -193,7 +196,7 @@ export function ModulePicker({
             <Card withBorder h={440} padding="xs" style={{ overflow: "auto" }}>
               {picked.length === 0 ? (
                 <Text c="dimmed" size="sm">
-                  왼쪽에서 넣을 모듈을 체크하세요. 체크한 순서대로 쌓이고, 끌어서 순서를 바꿀 수 있습니다.
+                  왼쪽에서 넣을 템플릿을 체크하세요. 체크한 순서대로 쌓이고, 끌어서 순서를 바꿀 수 있습니다.
                 </Text>
               ) : (
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
@@ -230,7 +233,7 @@ export function ModulePicker({
                 </Stack>
               ) : (
                 <Text c="dimmed" size="sm">
-                  모듈을 누르면 내용을 미리 볼 수 있습니다.
+                  템플릿을 누르면 내용을 미리 볼 수 있습니다.
                 </Text>
               )}
             </Card>
@@ -241,7 +244,7 @@ export function ModulePicker({
             취소
           </Button>
           <Button disabled={picked.length === 0} onClick={submit}>
-            {picked.length > 0 ? `${picked.length}개 넣기` : "모듈을 고르세요"}
+            {picked.length > 0 ? `${picked.length}개 넣기` : "템플릿을 고르세요"}
           </Button>
         </Group>
       </Stack>

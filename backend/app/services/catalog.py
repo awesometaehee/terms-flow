@@ -79,7 +79,7 @@ def create_clause(session: Session, data: ClauseCreate) -> Clause:
     content, content_json = validate_body(session, data.content, data.content_json)
     require_category(session, data.category_id)
     if session.scalar(sa.select(Clause.id).where(Clause.clause_key == data.clause_key)):
-        raise ConflictError("이미 존재하는 모듈 키입니다.", code="DUPLICATE_CLAUSE_KEY")
+        raise ConflictError("이미 존재하는 템플릿 키입니다.", code="DUPLICATE_CLAUSE_KEY")
     clause = Clause(
         clause_key=data.clause_key,
         document_type=data.document_type,
@@ -103,7 +103,7 @@ def create_clause(session: Session, data: ClauseCreate) -> Clause:
 
 def _ensure_not_deleted(clause: Clause) -> None:
     if clause.deleted_at is not None:
-        raise ConflictError("삭제된 모듈은 고칠 수 없습니다.", code="CLAUSE_DELETED")
+        raise ConflictError("삭제된 템플릿은 고칠 수 없습니다.", code="CLAUSE_DELETED")
 
 
 def update_clause(session: Session, clause_id: uuid.UUID, data: ClauseUpdate) -> Clause:
@@ -162,7 +162,7 @@ def delete_clause(session: Session, clause_id: uuid.UUID) -> None:
     if documents:
         raise ConflictError(
             f"문서 {len(documents)}개({name_list(documents)})에서 쓰고 있어 지울 수 없습니다. "
-            "문서에서 이 모듈 단락을 먼저 빼세요.",
+            "문서에서 이 템플릿 단락을 먼저 빼세요.",
             code="CLAUSE_IN_USE",
         )
     if session.scalar(sa.select(sa.func.count()).where(TemplateClauseRule.clause_id == clause.id)):

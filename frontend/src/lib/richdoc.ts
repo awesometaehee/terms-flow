@@ -10,7 +10,8 @@ export function normalizeDoc(node: unknown): unknown {
     if (key === "attrs" && value && typeof value === "object") {
       const attrs = Object.fromEntries(
         Object.entries(value as Record<string, unknown>)
-          .filter(([, v]) => v !== null && v !== undefined)
+          // 빈 값과 기본값(표 칸 colspan·rowspan 1)은 없는 것으로 본다.
+          .filter(([k, v]) => v !== null && v !== undefined && !((k === "colspan" || k === "rowspan") && v === 1))
           .sort(([a], [b]) => a.localeCompare(b)),
       );
       if (Object.keys(attrs).length) out[key] = attrs;

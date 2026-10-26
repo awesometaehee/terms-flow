@@ -71,7 +71,7 @@ from app.services.products import get_product, latest_revision
 from app.services.taxonomy import variable_labels, variables_by_key
 
 ENDED_REASON = "판매 종료(ENDED) 상품은 변경하지 않습니다."
-DRAFT_REASON = "판매 전(DRAFT) 상품입니다. 발행 시 최신 모듈이 자동으로 적용됩니다."
+DRAFT_REASON = "판매 전(DRAFT) 상품입니다. 발행 시 최신 템플릿이 자동으로 적용됩니다."
 UP_TO_DATE_REASON = "현재 발행본에 이미 이 리비전이 반영되어 있습니다."
 DOC_ENDED_REASON = "종료된 문서는 변경하지 않습니다."
 DOC_DRAFT_REASON = "작성 중인 문서입니다. 편집 화면의 '새 버전 있음'에서 직접 반영하세요."
@@ -281,10 +281,10 @@ def _analyze(session: Session, clause_id: uuid.UUID, revision_no: int) -> _Impac
         sa.select(Clause).where(Clause.id == clause_id).options(selectinload(Clause.revisions))
     )
     if clause is None:
-        raise NotFoundError("모듈을 찾을 수 없습니다.")
+        raise NotFoundError("템플릿을 찾을 수 없습니다.")
     by_no = {r.revision_no: r for r in clause.revisions}
     if revision_no not in by_no:
-        raise NotFoundError("모듈 리비전을 찾을 수 없습니다.")
+        raise NotFoundError("템플릿 리비전을 찾을 수 없습니다.")
     latest_no = clause.revisions[-1].revision_no
     if revision_no != latest_no:
         raise ConflictError(
@@ -384,7 +384,7 @@ def _apply_module(
     """원본 그대로인 단락을 새 리비전으로 바꾼다. 발행할 것이 없으면 False."""
     assert job.clause is not None and job.clause_revision is not None
     reason = (
-        f"공통 모듈 {job.clause.title} r{job.clause_revision.revision_no} 반영: {job.change_reason}"
+        f"템플릿 {job.clause.title} r{job.clause_revision.revision_no} 반영: {job.change_reason}"
     )
     filled = _fill_values(
         document, _used_keys_after(document, job.clause.id, job.clause_revision), fill
@@ -393,7 +393,7 @@ def _apply_module(
         session, document, job.clause.id, job.clause_revision, reason
     )
     if filled and not changed:
-        document_service.record_revision(session, document, "일괄 반영 중 변수 값 입력")
+        document_service.record_revision(session, document, "일괄 반영 중 치환 항목 값 입력")
     # 다시 시도할 때는 본문이 이미 반영되어 있으므로 발행만 한다.
     uses_revision = any(
         b.clause_id == job.clause_id
@@ -544,7 +544,7 @@ def _used_keys(document: Document) -> list[str]:
 def _get_variable(session: Session, variable_id: uuid.UUID) -> Variable:
     variable = session.get(Variable, variable_id)
     if variable is None:
-        raise NotFoundError("변수를 찾을 수 없습니다.")
+        raise NotFoundError("치환 항목을 찾을 수 없습니다.")
     return variable
 
 
@@ -629,7 +629,7 @@ def create_variable_job(
         request_id=data.request_id,
         variable_id=impact.variable_id,
         variable_value=impact.value,
-        change_reason=f"변수 [{impact.label}] 값 변경: {impact.value or '(비움)'}",
+        change_reason=f"치환 항목 [{impact.label}] 값 변경: {impact.value or '(비움)'}",
         target_snapshot={
             "targets": [],
             "excluded": [],

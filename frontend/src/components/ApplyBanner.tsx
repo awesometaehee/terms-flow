@@ -28,7 +28,7 @@ export function ApplyBanner({
   const apply = useMutation({
     mutationFn: () =>
       api<BulkUpdateDetail>("/bulk-updates", {
-        body: { request_id: requestId, clause_id: clauseId, revision_no: revisionNo, change_reason: "모듈 수정 반영", variable_values: values },
+        body: { request_id: requestId, clause_id: clauseId, revision_no: revisionNo, change_reason: "템플릿 수정 반영", variable_values: values },
       }),
   });
 
@@ -50,7 +50,7 @@ export function ApplyBanner({
   const missing = impact.data.missing_variables ?? [];
   const targets = [docs ? `사용 중 문서 ${docs}개` : "", products ? `판매 중 상품 ${products}개` : ""].filter(Boolean).join(", ");
   return (
-    <Alert color="blue" withCloseButton onClose={onClose} title={`${targets}가 이 모듈을 쓰고 있습니다`}>
+    <Alert color="blue" withCloseButton onClose={onClose} title={`${targets}가 이 템플릿을 쓰고 있습니다`}>
       <Text size="sm" mb="xs">
         지금 바꾼 내용으로 다시 발행할까요? 문서에서 따로 고친 단락과 종료된 문서는 그대로 둡니다.
       </Text>

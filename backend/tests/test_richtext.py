@@ -134,3 +134,14 @@ def test_normalize_drops_editor_nulls() -> None:
         ],
     }
     assert richtext.normalize(from_editor) == doc([text("a")])
+
+
+def test_normalize_drops_default_cell_spans() -> None:
+    def cell(**attrs: object) -> dict[str, object]:
+        return {"type": "tableCell", "attrs": attrs, "content": [{"type": "paragraph"}]}
+
+    assert richtext.normalize(cell(colspan=1, rowspan=1, colwidth=None)) == {
+        "type": "tableCell",
+        "content": [{"type": "paragraph"}],
+    }
+    assert richtext.normalize(cell(colspan=2, rowspan=1))["attrs"] == {"colspan": 2}

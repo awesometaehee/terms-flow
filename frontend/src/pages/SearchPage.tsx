@@ -27,7 +27,7 @@ export function SearchPage() {
         >
           <Group gap={6}>
             <Badge size="sm" color={h.kind === "MODULE" ? "indigo" : "teal"} variant="light">
-              {h.kind === "MODULE" ? "모듈" : "문서"}
+              {h.kind === "MODULE" ? "템플릿" : "문서"}
             </Badge>
             <Text fw={700}>{h.title}</Text>
             <Text size="xs" c="dimmed">

@@ -31,12 +31,15 @@ import {
   type VariableOut,
 } from "../api/client";
 import { ApplyBanner } from "../components/ApplyBanner";
+import { DraftBanner, DraftStatus } from "../components/DraftBanner";
 import { CategoryTree, categoryOptions, useCategories } from "../components/CategoryTree";
 import { ErrorAlert, Loading, formatDateTime } from "../components/common";
 import { EMPTY_DOC, RichEditor } from "../editor/RichEditor";
 import { VariablesContext, type VariableInfo } from "../editor/variables";
 import { newRequestId } from "../lib/diff";
-import { sameDoc } from "../lib/richdoc";
+import { SHOW_PRODUCT_FEATURE } from "../features";
+import { fetchDraft, formatDraftTime, removeDraft, useDraft } from "../lib/draft";
+import { docKey, sameDoc } from "../lib/richdoc";
 import { useSaveShortcut } from "../lib/useSaveShortcut";
 import { Link, navigate } from "../router";
 
@@ -57,7 +60,23 @@ export function ModuleList() {
   const [category, setCategory] = useState<string | null>(null);
   const [tag, setTag] = useState<string | null>(null);
   const [q, setQ] = useState("");
-  const [creating, setCreating] = useState(false);
+  // 새 모듈 창: 임시저장 키(새로 쓰기·이어 쓰기)와 이어 쓸 내용
+  const [creating, setCreating] = useState<{ key: string; initial: ModuleForm | null } | null>(null);
+  const drafts = useQuery({
+    queryKey: ["drafts", "module-new"],
+    queryFn: () => api<{ key: string; title: string | null; updated_at: string }[]>("/drafts?prefix=module-new:"),
+  });
+  const openNew = () => setCreating({ key: `module-new:${newRequestId().replace(/-/g, "")}`, initial: null });
+  const continueDraft = async (key: string) => {
+    const draft = await fetchDraft<ModuleForm>(key);
+    if (draft) setCreating({ key, initial: draft.value });
+    else void drafts.refetch();
+  };
+  const closeNew = () => {
+    setCreating(null);
+    // 창을 닫을 때 남은 내용을 보내므로 잠시 뒤 목록을 새로 읽는다.
+    window.setTimeout(() => void drafts.refetch(), 600);
+  };
   const categories = useCategories();
   const tags = useQuery({ queryKey: ["tags"], queryFn: () => api<TagOut[]>("/tags") });
   const params = new URLSearchParams();
@@ -68,6 +87,8 @@ export function ModuleList() {
     queryKey: ["clauses", params.toString()],
     queryFn: () => api<ClauseSummary[]>(`/clauses?${params}`),
   });
+  // 상품 기능을 숨기면 상품 템플릿 전용 모듈도 목록에서 뺀다.
+  const visibleModules = (modules.data ?? []).filter((m) => SHOW_PRODUCT_FEATURE || !m.document_type);
   const categoryName = (id: string | null) => categories.data?.find((c) => c.id === id)?.name ?? "-";
 
   return (
@@ -80,9 +101,44 @@ export function ModuleList() {
       <Grid.Col span={{ base: 12, md: 9 }}>
         <Stack>
           <Group justify="space-between">
-            <Title order={2}>모듈</Title>
-            <Button onClick={() => setCreating(true)}>+ 새 모듈</Button>
+            <Title order={2}>템플릿</Title>
+            <Button onClick={() => openNew()}>+ 새 템플릿</Button>
           </Group>
+          {(drafts.data?.length ?? 0) > 0 && (
+            <Card withBorder padding="sm" bg="yellow.0">
+              <Text size="sm" fw={600} mb={6}>
+                작성 중인 새 템플릿 {drafts.data!.length}개 (만들기 전 · 자동 임시저장)
+              </Text>
+              <Stack gap={4}>
+                {drafts.data!.map((d) => (
+                  <Group key={d.key} justify="space-between" wrap="nowrap">
+                    <Text size="sm" lineClamp={1}>
+                      {d.title || "(제목 없음)"}{" "}
+                      <Text span size="xs" c="dimmed">
+                        {formatDraftTime(Date.parse(d.updated_at))}
+                      </Text>
+                    </Text>
+                    <Group gap={4} wrap="nowrap">
+                      <Button size="compact-xs" variant="light" onClick={() => continueDraft(d.key)}>
+                        이어 쓰기
+                      </Button>
+                      <Button
+                        size="compact-xs"
+                        variant="subtle"
+                        color="red"
+                        onClick={() =>
+                          window.confirm(`'${d.title || "(제목 없음)"}' 임시저장본을 지울까요?`) &&
+                          void removeDraft(d.key).then(() => drafts.refetch())
+                        }
+                      >
+                        삭제
+                      </Button>
+                    </Group>
+                  </Group>
+                ))}
+              </Stack>
+            </Card>
+          )}
           <Group>
             <TextInput placeholder="제목·본문 검색" value={q} onChange={(e) => setQ(e.currentTarget.value)} w={260} />
             <Select
@@ -107,7 +163,7 @@ export function ModuleList() {
                 </Table.Tr>
               </Table.Thead>
               <Table.Tbody>
-                {modules.data?.map((m) => (
+                {visibleModules.map((m) => (
                   <Table.Tr key={m.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/modules/${m.id}`)}>
                     <Table.Td>
                       <Text fw={600}>{m.title}</Text>
@@ -115,7 +171,7 @@ export function ModuleList() {
                         {m.excerpt}
                       </Text>
                       <Group gap={4}>
-                        {m.document_type && (
+                        {SHOW_PRODUCT_FEATURE && m.document_type && (
                           <Badge size="xs" color="grape" variant="light">
                             상품 문서용
                           </Badge>
@@ -134,29 +190,55 @@ export function ModuleList() {
               </Table.Tbody>
             </Table>
           )}
-          {modules.data?.length === 0 && <Text c="dimmed">모듈이 없습니다. [+ 새 모듈]로 만드세요.</Text>}
+          {modules.data && visibleModules.length === 0 && <Text c="dimmed">템플릿이 없습니다. [+ 새 템플릿]로 만드세요.</Text>}
         </Stack>
       </Grid.Col>
-      <Modal opened={creating} onClose={() => setCreating(false)} title="새 모듈" size="xl">
-        <NewModuleForm defaultCategory={category} />
+      {/* 표·단 나누기를 편하게 만들 수 있도록 넓게 연다 */}
+      <Modal opened={creating !== null} onClose={closeNew} title="새 템플릿" size="90%">
+        {creating && (
+          <NewModuleForm
+            key={creating.key}
+            defaultCategory={category}
+            draftKey={creating.key}
+            initial={creating.initial}
+          />
+        )}
       </Modal>
     </Grid>
   );
 }
 
-function NewModuleForm({ defaultCategory }: { defaultCategory: string | null }) {
+function NewModuleForm({
+  defaultCategory,
+  draftKey,
+  initial,
+}: {
+  defaultCategory: string | null;
+  // 자동 임시저장 키 ("module-new:<id>"). 이어 쓰기면 initial에 그때 내용
+  draftKey: string;
+  initial: ModuleForm | null;
+}) {
+  const qc = useQueryClient();
   const categories = useCategories();
   const variableMap = useVariableMap();
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<string | null>(defaultCategory);
-  const [tags, setTags] = useState<string[]>([]);
-  const [content, setContent] = useState<RichDoc>(EMPTY_DOC);
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [category, setCategory] = useState<string | null>(initial ? initial.categoryId : defaultCategory);
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [content, setContent] = useState<RichDoc>(initial?.content ?? EMPTY_DOC);
+  // 자동 임시저장: 창을 닫거나 다른 PC로 옮겨도 모듈 목록의 '작성 중인 새 모듈'에서 이어 쓴다. 만들면 지운다.
+  const form: ModuleForm = { title, categoryId: category, tags, content };
+  const dirty = !!title.trim() || tags.length > 0 || !sameDoc(content, EMPTY_DOC);
+  const local = useDraft<ModuleForm>(draftKey, form, dirty, "new", { title: title.trim() || null, check: false });
   const create = useMutation({
     mutationFn: () =>
       api<ClauseDetail>("/clauses", {
         body: { clause_key: newModuleKey(), title, category_id: category, tags, content_json: content },
       }),
-    onSuccess: (m) => navigate(`/modules/${m.id}`),
+    onSuccess: (m) => {
+      // 임시본을 지운 뒤에 목록을 새로 읽는다.
+      void local.clear().then(() => qc.invalidateQueries({ queryKey: ["drafts", "module-new"] }));
+      navigate(`/modules/${m.id}`);
+    },
   });
   return (
     <VariablesContext.Provider value={variableMap}>
@@ -166,9 +248,12 @@ function NewModuleForm({ defaultCategory }: { defaultCategory: string | null }) 
           <Select label="카테고리" clearable data={categoryOptions(categories.data)} value={category} onChange={setCategory} />
           <TagsInput label="태그" value={tags} onChange={setTags} placeholder="입력 후 Enter" />
         </Group>
-        <Card withBorder>
+        <Card withBorder padding="lg" className="editor-card-tall">
           <RichEditor content={content} onChange={setContent} />
         </Card>
+        <Group justify="flex-end">
+          <DraftStatus savedAt={local.savedAt} failed={local.failed} />
+        </Group>
         <ErrorAlert error={create.error} />
         <Button disabled={!title.trim()} loading={create.isPending} onClick={() => create.mutate()}>
           만들기
@@ -179,6 +264,11 @@ function NewModuleForm({ defaultCategory }: { defaultCategory: string | null }) 
 }
 
 type ModuleForm = { title: string; categoryId: string | null; tags: string[]; content: RichDoc };
+
+// 임시본 비교용 (본문은 정규화)
+function formKey(f: ModuleForm): string {
+  return JSON.stringify({ ...f, content: docKey(f.content) });
+}
 
 function formFrom(m: ClauseDetail): ModuleForm {
   const latest = m.revisions[m.revisions.length - 1];
@@ -212,6 +302,13 @@ export function ModuleDetail({ id }: { id: string }) {
       form.tags.join("\u0000") !== original.tags.join("\u0000"));
   const contentChanged = !!form && !!original && !sameDoc(form.content, original.content);
   const dirty = metaChanged || contentChanged;
+  // 자동 임시저장 (이 브라우저). 저장하면 지운다.
+  const local = useDraft<ModuleForm>(
+    `module:${id}`,
+    form,
+    dirty,
+    module.data ? String(module.data.latest_revision_no) : null,
+  );
 
   const save = useMutation({
     mutationFn: async () => {
@@ -233,6 +330,7 @@ export function ModuleDetail({ id }: { id: string }) {
       return null;
     },
     onSuccess: (revisionNo) => {
+      local.clear();
       if (revisionNo) setSavedRevision(revisionNo);
       void qc.invalidateQueries({ queryKey: ["clause", id] });
       void qc.invalidateQueries({ queryKey: ["clauses"] });
@@ -257,7 +355,7 @@ export function ModuleDetail({ id }: { id: string }) {
   return (
     <VariablesContext.Provider value={variableMap}>
       <Stack>
-        <Link to="/modules">← 모듈 목록</Link>
+        <Link to="/modules">← 템플릿 목록</Link>
         <Group justify="space-between" align="flex-start">
           <Group style={{ flex: 1 }}>
             <TextInput
@@ -270,16 +368,17 @@ export function ModuleDetail({ id }: { id: string }) {
               style={{ flex: 1 }}
               placeholder="제목"
             />
-            {m.document_type && <Badge color="grape" variant="light">상품 문서용</Badge>}
+            {SHOW_PRODUCT_FEATURE && m.document_type && <Badge color="grape" variant="light">상품 문서용</Badge>}
           </Group>
           {!deleted && (
           <Group>
+            <DraftStatus savedAt={local.savedAt} failed={local.failed} />
             <Button
               variant="subtle"
               color="red"
               loading={remove.isPending}
               onClick={() =>
-                window.confirm(`'${m.title}' 모듈을 삭제할까요?\n종료된 문서와 발행본에 남은 내용은 그대로 둡니다.`) &&
+                window.confirm(`'${m.title}' 템플릿을 삭제할까요?\n종료된 문서와 발행본에 남은 내용은 그대로 둡니다.`) &&
                 remove.mutate()
               }
             >
@@ -303,10 +402,26 @@ export function ModuleDetail({ id }: { id: string }) {
           </Group>
           )}
         </Group>
-        {dirty && <Text size="xs" c="orange">저장하지 않은 변경이 있습니다 (Ctrl+S로 저장).</Text>}
+        {local.found && !deleted && formKey(local.found.value) !== formKey(form) && (
+          <DraftBanner
+            draft={local.found}
+            stale={local.found.base !== String(m.latest_revision_no)}
+            onRestore={() => {
+              setForm(local.found!.value);
+              setResetCount((n) => n + 1);
+              local.dismiss();
+            }}
+            onDiscard={local.clear}
+          />
+        )}
+        {dirty && (
+          <Text size="xs" c="orange">
+            저장하지 않은 변경이 있습니다 (Ctrl+S로 저장).
+          </Text>
+        )}
         {deleted && (
-          <Alert color="gray" title="삭제된 모듈입니다">
-            목록과 검색에서 빠졌고 문서에 새로 넣을 수 없습니다. 이 모듈을 쓰던 종료 문서의 기록을 위해 내용만 보여
+          <Alert color="gray" title="삭제된 템플릿입니다">
+            목록과 검색에서 빠졌고 문서에 새로 넣을 수 없습니다. 이 템플릿을 쓰던 종료 문서의 기록을 위해 내용만 보여
             줍니다.
           </Alert>
         )}
@@ -362,7 +477,7 @@ export function ModuleDetail({ id }: { id: string }) {
           </Accordion.Item>
         </Accordion>
 
-        <Modal opened={viewed !== undefined} onClose={() => setViewing(null)} title={`${m.title} · r${viewing}`} size="lg">
+        <Modal opened={viewed !== undefined} onClose={() => setViewing(null)} title={`${m.title} · r${viewing}`} size="80%">
           {viewed && (
             <Stack>
               <RichEditor content={viewed.content_json as RichDoc} editable={false} resetKey={viewed.id} />

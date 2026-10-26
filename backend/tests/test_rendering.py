@@ -70,7 +70,7 @@ def test_publish_creates_individual_and_combined_pdf_png(
     detail = _publish(client, product)
 
     assert detail["status"] == "PUBLISHED"
-    assert detail["manifest"]["renderer_version"].startswith("terms-flow-renderer/2; chromium/")
+    assert detail["manifest"]["renderer_version"].startswith("terms-flow-renderer/4; chromium/")
     page_counts = {}
     for doc_type, label in (
         ("TERMS", "약관"),

@@ -121,7 +121,7 @@ def delete_category(session: Session, category_id: uuid.UUID) -> None:
     )
     if in_use:
         raise ConflictError(
-            "하위 카테고리·모듈·문서가 있는 카테고리는 지울 수 없습니다.", code="CATEGORY_IN_USE"
+            "하위 카테고리·템플릿·문서가 있는 카테고리는 지울 수 없습니다.", code="CATEGORY_IN_USE"
         )
     session.delete(category)
     session.flush()
@@ -177,9 +177,9 @@ def variables_by_key(session: Session, keys: Iterable[str] | None = None) -> dic
 
 def create_variable(session: Session, data: VariableCreate) -> Variable:
     if data.key in PLACEHOLDER_VARIABLES:
-        raise ConflictError("상품 문서용 예약 변수 키입니다.", code="RESERVED_VARIABLE")
+        raise ConflictError("상품 문서용 예약 치환 항목 키입니다.", code="RESERVED_VARIABLE")
     if session.scalar(sa.select(Variable.id).where(Variable.key == data.key)):
-        raise ConflictError("이미 존재하는 변수 키입니다.", code="DUPLICATE_VARIABLE")
+        raise ConflictError("이미 존재하는 치환 항목 키입니다.", code="DUPLICATE_VARIABLE")
     variable = Variable(**data.model_dump())
     session.add(variable)
     session.flush()
@@ -189,7 +189,7 @@ def create_variable(session: Session, data: VariableCreate) -> Variable:
 def _get_variable(session: Session, variable_id: uuid.UUID) -> Variable:
     variable = session.get(Variable, variable_id)
     if variable is None or variable.deleted_at is not None:
-        raise NotFoundError("변수를 찾을 수 없습니다.")
+        raise NotFoundError("치환 항목을 찾을 수 없습니다.")
     return variable
 
 
@@ -267,11 +267,12 @@ def delete_variable(session: Session, variable_id: uuid.UUID) -> None:
     if modules or documents:
         where = []
         if modules:
-            where.append(f"모듈 {len(modules)}개({name_list(modules)})")
+            where.append(f"템플릿 {len(modules)}개({name_list(modules)})")
         if documents:
             where.append(f"문서 {len(documents)}개({name_list(documents)})")
         raise ConflictError(
-            f"{' · '.join(where)}에서 쓰고 있어 지울 수 없습니다. 본문에서 이 변수를 먼저 빼세요.",
+            f"{' · '.join(where)}에서 쓰고 있어 지울 수 없습니다. "
+            "본문에서 이 치환 항목을 먼저 빼세요.",
             code="VARIABLE_IN_USE",
         )
     variable.deleted_at = sa.func.now()
@@ -318,7 +319,9 @@ def validate_body(
         if not errors:
             unknown = [k for k in richtext.variable_keys(content_json) if k not in active]
             errors = [
-                FieldError(path=f"{prefix}content_json", message=f"정의되지 않은 변수입니다: {k}")
+                FieldError(
+                    path=f"{prefix}content_json", message=f"정의되지 않은 치환 항목입니다: {k}"
+                )
                 for k in unknown
             ]
         if errors:
@@ -334,7 +337,7 @@ def validate_body(
     if unknown:
         raise ValidationFailed(
             [
-                FieldError(path=f"{prefix}content", message=f"정의되지 않은 변수입니다: {k}")
+                FieldError(path=f"{prefix}content", message=f"정의되지 않은 치환 항목입니다: {k}")
                 for k in unknown
             ]
         )

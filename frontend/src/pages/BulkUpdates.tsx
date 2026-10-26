@@ -15,6 +15,7 @@ import {
 } from "../api/client";
 import { ErrorAlert, HtmlFrame, Loading, StatusBadge, formatDateTime } from "../components/common";
 import { MissingValues, allFilled } from "../components/MissingValues";
+import { SHOW_PRODUCT_FEATURE } from "../features";
 import { diffLines, downloadText, newRequestId, toCsv } from "../lib/diff";
 import { Link, navigate, useQueryParam } from "../router";
 
@@ -44,8 +45,8 @@ export function BulkUpdateNew() {
   const d = impact.data;
   return (
     <Stack>
-      <Link to={`/modules/${clauseId}`}>← 모듈</Link>
-      <Title order={2}>공통 모듈 일괄 반영 · 영향 분석</Title>
+      <Link to={`/modules/${clauseId}`}>← 템플릿</Link>
+      <Title order={2}>템플릿 일괄 반영 · 영향 분석</Title>
       <Text>
         <code>{d.clause_key}</code> {d.title} — r{d.previous_revision?.revision_no ?? "-"} → r{d.revision.revision_no}
       </Text>
@@ -97,8 +98,9 @@ export function BulkUpdateNew() {
       <Card withBorder>
         <Stack>
           <Alert color="blue">
-            실행하면 사용 중 문서(와 판매 중 상품)마다 새 버전을 만들어 PDF·PNG로 발행합니다. 기존 발행본, 종료된
-            문서·상품, 문서에서 고친 단락은 바뀌지 않습니다. 실행 직전에 대상을 다시 확인합니다.
+            {SHOW_PRODUCT_FEATURE
+              ? "실행하면 사용 중 문서(와 판매 중 상품)마다 새 버전을 만들어 PDF·PNG로 발행합니다. 기존 발행본, 종료된 문서·상품, 문서에서 고친 단락은 바뀌지 않습니다. 실행 직전에 대상을 다시 확인합니다."
+              : "실행하면 사용 중 문서마다 새 버전을 만들어 PDF·PNG로 발행합니다. 기존 발행본, 종료된 문서, 문서에서 고친 단락은 바뀌지 않습니다. 실행 직전에 대상을 다시 확인합니다."}
           </Alert>
           <MissingValues missing={d.missing_variables ?? []} values={values} onChange={setValues} />
           <TextInput label="수정 사유" required value={reason} onChange={(e) => setReason(e.currentTarget.value)} />
@@ -166,7 +168,7 @@ function ImpactTable({ rows, withReason }: { rows: ImpactProduct[]; withReason?:
             </Table.Td>
             <Table.Td>
               {r.current_version_no ? `v${r.current_version_no}` : "-"}
-              {r.current_clause_revision_no ? ` (모듈 r${r.current_clause_revision_no})` : ""}
+              {r.current_clause_revision_no ? ` (템플릿 r${r.current_clause_revision_no})` : ""}
             </Table.Td>
             {withReason && <Table.Td>{r.reason}</Table.Td>}
           </Table.Tr>
@@ -179,7 +181,7 @@ function ImpactTable({ rows, withReason }: { rows: ImpactProduct[]; withReason?:
 // 작업 이름: 모듈 반영은 "모듈 r3", 변수 반영은 "변수 [수수료] → 2,000원"
 export function jobTitle(j: BulkUpdateSummary): string {
   return j.kind === "VARIABLE"
-    ? `변수 [${j.variable_label}] → ${j.variable_value || "(비움)"}`
+    ? `치환 항목 [${j.variable_label}] → ${j.variable_value || "(비움)"}`
     : `${j.clause_title} r${j.revision_no}`;
 }
 
@@ -407,7 +409,7 @@ export function BulkUpdateList() {
     <Stack>
       <Title order={2}>일괄 반영 작업</Title>
       <Text size="sm" c="dimmed">
-        새 작업은 모듈 화면에서 새 버전을 저장한 뒤 영향 분석을 거쳐 실행합니다.
+        새 작업은 템플릿 화면에서 새 버전을 저장한 뒤 영향 분석을 거쳐 실행합니다.
       </Text>
       <ErrorAlert error={jobs.error} />
       <Table striped highlightOnHover>

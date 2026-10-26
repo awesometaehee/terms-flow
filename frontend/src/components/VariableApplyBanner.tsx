@@ -39,7 +39,7 @@ export function VariableApplyBanner({ variableId, onClose }: { variableId: strin
   }
   const count = d.document_targets.length + overwrite.length;
   return (
-    <Alert color="blue" withCloseButton onClose={onClose} title={`[${d.label}] 변수를 쓰는 사용 중 문서 ${total}개`}>
+    <Alert color="blue" withCloseButton onClose={onClose} title={`[${d.label}] 치환 항목을 쓰는 사용 중 문서 ${total}개`}>
       <Stack gap="xs">
         <Text size="sm">
           새 값 <b>{d.value || "(비움)"}</b>으로 다시 발행할까요?

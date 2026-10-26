@@ -5,7 +5,8 @@
 
 허용 노드: doc, paragraph, heading(1~3), text, hardBreak, bulletList, orderedList, listItem,
           variable(인라인 변수 칩, attrs.key),
-          table > tableRow > tableCell·tableHeader (attrs: colspan, rowspan, colwidth, background),
+          table > tableRow(attrs.height: 최소 높이 px) > tableCell·tableHeader
+          (attrs: colspan, rowspan, colwidth, background),
           columns > column (단 나누기 2~4단, column.attrs.width: 너비 비율),
           image (attrs.src: 이 시스템에 올린 이미지 /api/assets/... 만, width·height·alt)
 허용 서식: bold, italic, underline, strike, textStyle(color), highlight(color), link(href)
@@ -163,6 +164,10 @@ def _validate_table(
         if not isinstance(row, dict) or row.get("type") != "tableRow":
             errors.append(FieldError(path=row_path, message="표 행(tableRow)이어야 합니다."))
             continue
+        # 행 높이(px, 최소 높이). 끌어서 맞춘 값
+        height = (row.get("attrs") or {}).get("height")
+        if height is not None and not _int_in(height, 8, 2000):
+            _fail(errors, f"{row_path}.attrs.height", "행 높이는 8~2000px입니다.")
         cells = row.get("content") or []
         if not cells or len(cells) > 30:
             errors.append(FieldError(path=row_path, message="표의 칸은 행마다 1~30개입니다."))
@@ -220,7 +225,7 @@ def _validate_inline(node: Any, path: str, errors: list[FieldError]) -> None:
         key = (node.get("attrs") or {}).get("key")
         if not isinstance(key, str) or not VARIABLE_KEY.match(key):
             errors.append(
-                FieldError(path=f"{path}.attrs.key", message="변수 키가 올바르지 않습니다.")
+                FieldError(path=f"{path}.attrs.key", message="치환 항목 키가 올바르지 않습니다.")
             )
     for i, mark in enumerate(node.get("marks") or []):
         mark_path = f"{path}.marks[{i}]"
@@ -251,8 +256,15 @@ def _validate_inline(node: Any, path: str, errors: list[FieldError]) -> None:
 # --- 정규화 ---------------------------------------------------------------------
 
 
+# 값이 1이면 기본값이라 저장하지 않는 속성 (표 칸 합치기)
+_DEFAULT_ONE = {"colspan", "rowspan"}
+
+
 def normalize(node: Any) -> Any:
-    """에디터가 붙이는 빈 값(null 속성, 빈 attrs·marks)을 없앤다. 저장·비교 전에 쓴다."""
+    """에디터가 붙이는 빈 값(null 속성, 빈 attrs·marks)과 기본값(표 칸 colspan·rowspan 1)을 없앤다.
+
+    저장·비교 전에 쓴다. 프런트 lib/richdoc.ts normalizeDoc과 같은 규칙이어야 한다.
+    """
     if isinstance(node, list):
         return [normalize(n) for n in node]
     if not isinstance(node, dict):
@@ -260,7 +272,11 @@ def normalize(node: Any) -> Any:
     out: dict[str, Any] = {}
     for key, value in node.items():
         if key == "attrs" and isinstance(value, dict):
-            attrs = {k: v for k, v in value.items() if v is not None}
+            attrs = {
+                k: v
+                for k, v in value.items()
+                if v is not None and not (k in _DEFAULT_ONE and v == 1)
+            }
             if attrs:
                 out[key] = attrs
         elif key in ("marks", "content") and isinstance(value, list):
@@ -465,11 +481,18 @@ def to_html(
         for cell in rows[0].get("content") or [] if rows else []:
             cattrs = cell.get("attrs") or {}
             widths += cattrs.get("colwidth") or [None] * int(cattrs.get("colspan", 1))
+        # 저장된 px 너비는 비율로 쓴다. 너비가 없는 열은 있는 열들의 평균.
+        # (에디터 FitTableView와 같은 규칙)
+        # 화면·용지 너비가 달라도 표가 넘치거나 일부 열이 찌그러지지 않는다.
         colgroup = ""
         if any(widths):
+            known = [w for w in widths if w]
+            average = sum(known) / len(known)
+            filled = [w or average for w in widths]
+            total = sum(filled)
             colgroup = (
                 "<colgroup>"
-                + "".join(f"<col{_style(width=f'{w}px' if w else None)}>" for w in widths)
+                + "".join(f"<col{_style(width=f'{w / total * 100:.2f}%')}>" for w in filled)
                 + "</colgroup>"
             )
         body = ""
@@ -486,7 +509,8 @@ def to_html(
                 inner = "".join(block(c) for c in cell.get("content") or [])
                 fill = _style(background_color=cattrs.get("background"))
                 cells += f"<{tag}{span}{fill}>{inner}</{tag}>"
-            body += f"<tr>{cells}</tr>"
+            height = (row.get("attrs") or {}).get("height")
+            body += f"<tr{_style(height=f'{int(height)}px' if height else None)}>{cells}</tr>"
         return f'<table class="rt-table">{colgroup}<tbody>{body}</tbody></table>'
 
     return "".join(block(c) for c in doc.get("content") or [])

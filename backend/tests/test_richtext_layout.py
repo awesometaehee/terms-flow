@@ -199,3 +199,27 @@ def test_publish_document_with_table_columns_and_image(client: TestClient, tmp_p
     assert "[샘플] 고인용품" in page_text and "[샘플] 상품 사진" in page_text
     # 이미지가 PDF에 실제로 들어갔는지
     assert len(reader.pages[0].images) == 1
+
+
+def test_column_widths_render_as_proportions() -> None:
+    # 넓은 화면에서 맞춘 px 너비(합 1000)와 너비 없는 열 → 비율로 출력해 용지에 맞춘다
+    body = {
+        "type": "doc",
+        "content": [table([cell("a", colwidth=[300]), cell("b", colwidth=[500]), cell("c")])],
+    }
+    html = richtext.to_html(body, {})
+    # 너비 없는 열은 있는 열들의 평균(400) → 300:500:400
+    assert '<col style="width:25.00%">' in html
+    assert '<col style="width:41.67%">' in html
+    assert '<col style="width:33.33%">' in html
+
+
+def test_row_height() -> None:
+    body = {"type": "doc", "content": [table([cell("a")], [cell("b")])]}
+    body["content"][0]["content"][0]["attrs"] = {"height": 44}
+    assert richtext.validate(body) == []
+    assert '<tr style="height:44px">' in richtext.to_html(body, {})
+    body["content"][0]["content"][1]["attrs"] = {"height": 3}
+    assert [e.path for e in richtext.validate(body)] == [
+        "content_json.content[0].content[1].attrs.height"
+    ]

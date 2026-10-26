@@ -42,9 +42,11 @@ import { ErrorAlert, HtmlFrame, Loading, StatusBadge, formatDateTime } from "../
 import { EMPTY_DOC, RichEditor } from "../editor/RichEditor";
 import { VariablesContext, type VariableInfo } from "../editor/variables";
 import { ApplyBanner } from "../components/ApplyBanner";
+import { DraftBanner, DraftStatus } from "../components/DraftBanner";
 import { newRequestId } from "../lib/diff";
+import { useDraft } from "../lib/draft";
 import { useSaveShortcut } from "../lib/useSaveShortcut";
-import { sameDoc } from "../lib/richdoc";
+import { docKey, sameDoc } from "../lib/richdoc";
 import { Link, navigate } from "../router";
 import { DeleteDocumentButton } from "./Documents";
 import { ModulePicker } from "./ModulePicker";
@@ -95,6 +97,11 @@ function toDraft(doc: DocumentDetail): Draft {
   };
 }
 
+// 임시본 비교용: 편집기 내부 값(resetCount)은 빼고 본문은 정규화해 비교한다.
+function draftKey(d: Draft): string {
+  return JSON.stringify({ ...d, blocks: d.blocks.map((b) => ({ ...b, resetCount: 0, content: docKey(b.content) })) });
+}
+
 function variableKeys(node: RichDoc, out: Set<string>): Set<string> {
   if (node.type === "variable" && typeof node.attrs?.key === "string") out.add(node.attrs.key);
   for (const child of node.content ?? []) variableKeys(child, out);
@@ -126,6 +133,18 @@ export function DocumentEditor({ id }: { id: string }) {
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
+
+  // 자동 임시저장 (이 브라우저). 저장에 성공하면 지운다.
+  const local = useDraft<Draft>(`document:${id}`, draft, dirty, query.data ? String(query.data.lock_version) : null);
+  const showDraft = !!local.found && !!draft && query.data?.status !== "ENDED" && draftKey(local.found.value) !== draftKey(draft);
+  const restoreDraft = () => {
+    const found = local.found!;
+    const stamp = Date.now();
+    // resetCount를 바꿔야 단락 편집기들이 불러온 본문으로 다시 그려진다.
+    setDraft({ ...found.value, blocks: found.value.blocks.map((b, i) => ({ ...b, resetCount: stamp + i })) });
+    setDirty(true);
+    local.dismiss();
+  };
 
   const change = (fn: (d: Draft) => Draft) => {
     setDraft((d) => (d ? fn(d) : d));
@@ -159,6 +178,7 @@ export function DocumentEditor({ id }: { id: string }) {
         },
       }),
     onSuccess: (data) => {
+      local.clear();
       qc.setQueryData(["document", id], data);
       void qc.invalidateQueries({ queryKey: ["document-revisions", id] });
     },
@@ -340,6 +360,7 @@ export function DocumentEditor({ id }: { id: string }) {
                 <Button variant="light" onClick={() => setPublishOpen(true)} disabled={dirty}>
                   발행 (PDF·PNG)
                 </Button>
+                <DraftStatus savedAt={local.savedAt} failed={local.failed} />
                 <Button onClick={() => save.mutate(undefined)} disabled={!dirty} loading={save.isPending}>
                   {dirty ? "저장" : "저장됨"}
                 </Button>
@@ -348,6 +369,14 @@ export function DocumentEditor({ id }: { id: string }) {
           </Group>
         </Group>
         {readOnly && <Alert color="gray">종료된 문서는 읽기 전용입니다.</Alert>}
+        {showDraft && (
+          <DraftBanner
+            draft={local.found!}
+            stale={local.found!.base !== String(doc.lock_version)}
+            onRestore={restoreDraft}
+            onDiscard={local.clear}
+          />
+        )}
         {dirty && !readOnly && (
           <Text size="xs" c="orange">
             저장하지 않은 변경이 있습니다 (Ctrl+S로 저장). 미리보기·발행·상태 변경은 저장 후에 할 수 있습니다.
@@ -402,7 +431,7 @@ export function DocumentEditor({ id }: { id: string }) {
               </DndContext>
               {draft.blocks.length === 0 && (
                 <Text c="dimmed" ta="center" py="xl">
-                  선 위의 + 를 눌러 모듈을 가져오거나 단락을 직접 쓰세요.
+                  선 위의 + 를 눌러 템플릿을 가져오거나 단락을 직접 쓰세요.
                 </Text>
               )}
             </Card>
@@ -410,7 +439,7 @@ export function DocumentEditor({ id }: { id: string }) {
           <Grid.Col span={{ base: 12, lg: 4 }}>
             <Tabs defaultValue="info">
               <Tabs.List>
-                <Tabs.Tab value="info">정보·변수</Tabs.Tab>
+                <Tabs.Tab value="info">정보·치환 항목</Tabs.Tab>
                 <Tabs.Tab value="publications">발행</Tabs.Tab>
                 <Tabs.Tab value="revisions">변경 이력</Tabs.Tab>
               </Tabs.List>
@@ -426,9 +455,9 @@ export function DocumentEditor({ id }: { id: string }) {
                   />
                   <TagsInput label="태그" value={draft.tags} onChange={(v) => change((d) => ({ ...d, tags: v }))} disabled={readOnly} />
                   <Text fw={700} size="sm" mt="sm">
-                    변수 값
+                    치환 항목 값
                   </Text>
-                  {[...usedKeys].length === 0 && <Text size="sm" c="dimmed">본문에 쓰인 변수가 없습니다.</Text>}
+                  {[...usedKeys].length === 0 && <Text size="sm" c="dimmed">본문에 쓰인 치환 항목이 없습니다.</Text>}
                   {[...usedKeys].map((key) => {
                     const v = variables.data?.find((x) => x.key === key);
                     return (
@@ -487,7 +516,7 @@ function InsertLine({ onModule, onText }: { onModule: () => void; onText: () => 
           </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Item onClick={onModule}>모듈 가져오기</Menu.Item>
+          <Menu.Item onClick={onModule}>템플릿 가져오기</Menu.Item>
           <Menu.Item onClick={onText}>빈 단락 쓰기</Menu.Item>
         </Menu.Dropdown>
       </Menu>
@@ -604,22 +633,22 @@ function BlockCard({
             )}
             {outdated && (
               <Badge size="xs" color="blue" variant="outline">
-                원본 모듈이 바뀜
+                원본 템플릿이 바뀜
               </Badge>
             )}
             {!readOnly && hasModuleActions && (
               <Menu withinPortal position="bottom-end">
                 <Menu.Target>
-                  <ActionIcon size="xs" variant="subtle" color="gray" ml="auto" aria-label="모듈 메뉴">
+                  <ActionIcon size="xs" variant="subtle" color="gray" ml="auto" aria-label="템플릿 메뉴">
                     ⋯
                   </ActionIcon>
                 </Menu.Target>
                 <Menu.Dropdown>
                   {block.kind === "MODULE" && block.modified && <Menu.Item onClick={onRevert}>원본으로 되돌리기</Menu.Item>}
-                  {outdated && <Menu.Item onClick={onUpdateLatest}>원본 모듈의 새 내용으로 바꾸기</Menu.Item>}
+                  {outdated && <Menu.Item onClick={onUpdateLatest}>원본 템플릿의 새 내용으로 바꾸기</Menu.Item>}
                   {block.kind === "MODULE" && block.modified && (
                     <Menu.Item disabled={promoting} onClick={onPromote}>
-                      원본 모듈에도 저장
+                      원본 템플릿에도 저장
                     </Menu.Item>
                   )}
                 </Menu.Dropdown>

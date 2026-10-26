@@ -428,13 +428,13 @@ def _build_blocks(
                     errors.append(
                         FieldError(
                             path=f"{path}.clause_revision_no",
-                            message="존재하지 않는 모듈 리비전입니다.",
+                            message="존재하지 않는 템플릿 리비전입니다.",
                         )
                     )
                     continue
                 if revision.clause_id in deleted and block.id not in existing_ids:
                     errors.append(
-                        FieldError(path=f"{path}.clause_id", message="삭제된 모듈입니다.")
+                        FieldError(path=f"{path}.clause_id", message="삭제된 템플릿입니다.")
                     )
                     continue
                 override = None
@@ -469,7 +469,7 @@ def _build_blocks(
                 unknown = [k for k in richtext.variable_keys(block.content_json) if k not in labels]
                 errors += [
                     FieldError(
-                        path=f"{path}.content_json", message=f"정의되지 않은 변수입니다: {k}"
+                        path=f"{path}.content_json", message=f"정의되지 않은 치환 항목입니다: {k}"
                     )
                     for k in unknown
                 ]
@@ -498,7 +498,7 @@ def save_document(session: Session, document_id: uuid.UUID, data: DocumentSave) 
     if unknown:
         raise ValidationFailed(
             [
-                FieldError(path=f"variable_values.{k}", message="정의되지 않은 변수입니다.")
+                FieldError(path=f"variable_values.{k}", message="정의되지 않은 치환 항목입니다.")
                 for k in unknown
             ]
         )
@@ -551,7 +551,7 @@ def promote_block(
         raise NotFoundError("단락을 찾을 수 없습니다.")
     if block.kind != BlockKind.MODULE or block.content_json is None:
         raise ConflictError(
-            "문서에서 수정한 모듈 단락만 원본에 반영할 수 있습니다.", code="NOT_MODIFIED"
+            "문서에서 수정한 템플릿 단락만 원본에 반영할 수 있습니다.", code="NOT_MODIFIED"
         )
     assert block.clause_revision is not None and block.clause_id is not None
     clause = session.scalar(
@@ -564,7 +564,7 @@ def promote_block(
     latest_no = clause.revisions[-1].revision_no
     if latest_no != block.clause_revision.revision_no:
         raise ConflictError(
-            f"원본 모듈이 그사이 r{latest_no}으로 바뀌었습니다. "
+            f"원본 템플릿이 그사이 r{latest_no}으로 바뀌었습니다. "
             "최신 원본과 비교한 뒤 다시 반영하세요.",
             code="VERSION_CONFLICT",
         )
@@ -584,7 +584,7 @@ def promote_block(
     _add_revision(
         session,
         document,
-        f"모듈 {clause.title} r{revision.revision_no}에 반영: {data.change_reason}",
+        f"템플릿 {clause.title} r{revision.revision_no}에 반영: {data.change_reason}",
     )
     return revision
 

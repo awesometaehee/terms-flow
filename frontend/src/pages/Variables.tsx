@@ -51,11 +51,11 @@ export function VariableList() {
   return (
     <Stack>
       <Group justify="space-between">
-        <Title order={2}>변수</Title>
-        <Button onClick={() => open({ id: null, label: "", default_value: "", description: "" })}>+ 새 변수</Button>
+        <Title order={2}>치환 항목</Title>
+        <Button onClick={() => open({ id: null, label: "", default_value: "", description: "" })}>+ 새 치환 항목</Button>
       </Group>
       <Text size="sm" c="dimmed">
-        모듈·문서 본문에서 <b>{"{{"}</b> 를 입력하면 변수를 골라 넣을 수 있습니다. 값은 문서마다 입력하고, 비워 두면
+        템플릿·문서 본문에서 <b>{"{{"}</b> 를 입력하면 치환 항목을 골라 넣을 수 있습니다. 값은 문서마다 입력하고, 비워 두면
         기본값을 씁니다.
       </Text>
       {applyFor && (
@@ -98,9 +98,9 @@ export function VariableList() {
           </Table.Tbody>
         </Table>
       )}
-      {variables.data?.length === 0 && <Text c="dimmed">변수가 없습니다. [+ 새 변수]로 만드세요.</Text>}
+      {variables.data?.length === 0 && <Text c="dimmed">치환 항목이 없습니다. [+ 새 치환 항목]으로 만드세요.</Text>}
 
-      <Modal opened={editing !== null} onClose={() => setEditing(null)} title={editing?.id ? "변수 편집" : "새 변수"}>
+      <Modal opened={editing !== null} onClose={() => setEditing(null)} title={editing?.id ? "치환 항목 편집" : "새 치환 항목"}>
         {editing && (
           <Stack>
             <TextInput
@@ -130,7 +130,7 @@ export function VariableList() {
                   variant="subtle"
                   color="red"
                   loading={remove.isPending}
-                  onClick={() => window.confirm(`[${editing.label}] 변수를 지울까요?`) && remove.mutate(editing.id!)}
+                  onClick={() => window.confirm(`[${editing.label}] 치환 항목을 지울까요?`) && remove.mutate(editing.id!)}
                 >
                   삭제
                 </Button>

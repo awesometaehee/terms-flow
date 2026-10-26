@@ -5,7 +5,7 @@ import "./editor.css";
 
 import { ActionIcon, ColorSwatch, Divider, Group, Menu, Tooltip } from "@mantine/core";
 import { Highlight } from "@tiptap/extension-highlight";
-import { Table, TableRow } from "@tiptap/extension-table";
+import { Table } from "@tiptap/extension-table";
 import { TextAlign } from "@tiptap/extension-text-align";
 import { Color, TextStyle } from "@tiptap/extension-text-style";
 import { Placeholder } from "@tiptap/extensions";
@@ -20,7 +20,18 @@ import type { RichDoc } from "../api/client";
 import { sameDoc } from "../lib/richdoc";
 import { BlockTools } from "./BlockTools";
 import { ColorPicker, appendToBody, useBubbleRepair, useEditorActive } from "./bubble";
-import { Column, Columns, ImagePaste, RichImage, RichTableCell, RichTableHeader } from "./layout";
+import {
+  Column,
+  Columns,
+  FitTableView,
+  ImagePaste,
+  RichImage,
+  RichTableCell,
+  RichTableHeader,
+  RichTableRow,
+  RowResize,
+  TableFitResize,
+} from "./layout";
 import { SlashCommand } from "./slash";
 import { Variable, VariableSuggestion, VariablesContext } from "./variables";
 
@@ -74,8 +85,10 @@ export function RichEditor({
       TextAlign.configure({ types: ["heading", "paragraph"] }),
       Variable.configure({ getVariables }),
       VariableSuggestion.configure({ getVariables }),
-      Table.configure({ resizable: true, cellMinWidth: 40, lastColumnResizable: false }),
-      TableRow,
+      Table.configure({ resizable: true, cellMinWidth: 40, lastColumnResizable: false, View: FitTableView }),
+      RichTableRow,
+      RowResize,
+      TableFitResize,
       RichTableHeader,
       RichTableCell,
       Columns,
@@ -84,7 +97,7 @@ export function RichEditor({
       ImagePaste,
       SlashCommand,
       Placeholder.configure({
-        placeholder: "내용을 입력하세요 — {{ 변수 넣기 · 줄 처음에서 / 표·단 나누기·이미지",
+        placeholder: "내용을 입력하세요 — {{ 치환 항목 넣기 · 줄 처음에서 / 표·단 나누기·이미지",
       }),
     ],
     content,

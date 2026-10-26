@@ -138,9 +138,9 @@ const VariableList = forwardRef<ListHandle, SuggestionProps<VariableInfo>>(funct
     },
   }));
   return (
-    <div className="variable-suggest" role="listbox" aria-label="변수 고르기">
-      <div className="variable-suggest-title">변수 넣기 {props.query ? `· "${props.query}"` : ""}</div>
-      {props.items.length === 0 && <div className="variable-suggest-empty">일치하는 변수가 없습니다</div>}
+    <div className="variable-suggest" role="listbox" aria-label="치환 항목 고르기">
+      <div className="variable-suggest-title">치환 항목 넣기 {props.query ? `· "${props.query}"` : ""}</div>
+      {props.items.length === 0 && <div className="variable-suggest-empty">일치하는 치환 항목이 없습니다</div>}
       {props.items.map((v, i) => (
         <button
           key={v.key}
